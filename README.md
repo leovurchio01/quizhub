@@ -1,105 +1,336 @@
-# PSS Quiz Hub
+<div align="center">
 
-Una piccola web-app (Next.js) da mettere su **Vercel** per **caricare i tuoi quiz HTML ed eseguirli dal browser dell'iPad**. La salvi come icona sulla Home (PWA) e la apri quando ti serve, anche **offline**.
+# QuizHub <kbd>QH</kbd>
 
-- I quiz vengono salvati **nel browser del dispositivo** (IndexedDB): niente database, niente costi, nessun dato che esce dall'iPad.
-- Libreria con **ricerca, categorie, preferiti, note, rinomina ed elimina**.
-- Ogni quiz gira in un **iframe** isolato ma con `localStorage` funzionante, così lo **storico interno del quiz** (punteggi, tentativi) viene salvato tra una sessione e l'altra.
-- **Login Google opzionale**, spento di default (vedi sotto).
+![QuizHub](https://img.shields.io/badge/QH-QuizHub-ff9900?style=for-the-badge&labelColor=111111)
+![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=nextdotjs)
+![PWA](https://img.shields.io/badge/PWA-offline--ready-5A67D8?style=for-the-badge)
+![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=for-the-badge&logo=vercel)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
----
+**Your personal exam-quiz vault. Upload HTML quizzes, organize them like a study library, and run them anywhere — especially on iPad.**
 
-## 1) Deploy su Vercel — senza terminale (consigliato)
+Built for students who want a clean, fast, offline-friendly place to keep serious exam trainers without paying for a database or installing an app.
 
-1. **Crea un repository su GitHub** e caricaci questa cartella.
-   - Il modo più semplice: vai su [github.com/new](https://github.com/new), crea un repo vuoto (es. `pss-quiz-hub`), poi **Add file → Upload files** e trascina **tutto il contenuto della cartella** (NON caricare `node_modules` né `.next` se presenti).
-2. Vai su [vercel.com](https://vercel.com) → accedi (puoi usare il tuo account GitHub) → **Add New… → Project** → **Import** il repo appena creato.
-3. Lascia tutte le impostazioni di default (Framework: *Next.js*, rilevato in automatico) e premi **Deploy**. Non serve configurare nulla: l'app parte **aperta, senza login**.
-4. Al termine ottieni un URL tipo `https://pss-quiz-hub-xxxx.vercel.app`.
+[Features](#features) • [Demo flow](#demo-flow) • [Quick start](#quick-start) • [Deploy on Vercel](#deploy-on-vercel) • [Google login](#optional-google-login) • [Tech stack](#tech-stack)
 
-### Metterla come app sull'iPad
-1. Apri quell'URL con **Safari** sull'iPad.
-2. Tocca **Condividi** (l'icona con la freccia) → **Aggiungi a Home**.
-3. Ora hai l'icona "PSS Quiz" a tutto schermo. Funziona anche senza rete.
+</div>
 
 ---
 
-## 2) Deploy con la CLI Vercel (alternativa)
+## What is QuizHub?
 
-Se preferisci il terminale:
+**QuizHub** is a small but polished **Next.js PWA** that lets you upload and run your own **self-contained HTML quiz files** from the browser.
+
+It was designed for university exam prep: you generate or collect HTML quizzes, upload them once, organize them by subject, and open them later from your iPad like a real study app.
+
+No backend database. No subscriptions. No cloud storage required.
+
+Your quizzes stay in your browser using **IndexedDB**, and each quiz can keep its own internal progress/history using `localStorage`.
+
+---
+
+## Why students will like it
+
+- **Perfect for exam season** — keep theory quizzes, lab trainers, mock exams and flashcard-style HTML tools in one place.
+- **iPad-friendly** — deploy it, open it in Safari, then add it to the Home Screen like an app.
+- **Offline-first mindset** — great for trains, libraries, classrooms, and study sessions with bad Wi-Fi.
+- **Local-first privacy** — your uploaded quiz files stay on the device unless you choose to share/deploy something yourself.
+- **No database setup** — Vercel + browser storage is enough.
+- **Simple but serious** — search, folders, favorites, notes, rename, delete and full-screen quiz runner.
+
+---
+
+## Features
+
+### Quiz library
+
+- Upload one or multiple `.html` quiz files.
+- Store quizzes locally in **IndexedDB**.
+- Search by name, folder/category or notes.
+- Add folders/categories such as `Theory`, `Lab`, `Mock Exam`, `Weak Topics`.
+- Mark quizzes as favorites.
+- Rename quizzes.
+- Add personal notes.
+- Delete quizzes when you no longer need them.
+
+### Quiz runner
+
+- Opens each HTML quiz inside a dedicated runner page.
+- Uses an `iframe srcdoc` approach so the quiz runs directly in-browser.
+- Keeps `localStorage` available inside the quiz, useful for quiz history, scores and saved attempts.
+- Includes quick actions such as reload and fullscreen.
+
+### PWA experience
+
+- Installable from Safari / Chrome / Edge.
+- Works well as an iPad Home Screen app.
+- Includes manifest, service worker and app icons.
+- Caches the app shell for fast access.
+
+### Optional Google login
+
+- Google authentication is included but disabled by default.
+- Useful if you deploy the app publicly and want a simple access gate.
+- Can be enabled with environment variables.
+
+> By default, QuizHub is open and local-first because the uploaded quizzes are saved in the browser, not in a shared cloud database.
+
+---
+
+## Demo flow
+
+```text
+1. Deploy QuizHub on Vercel
+2. Open it on your iPad
+3. Add it to Home Screen
+4. Upload your quiz HTML files
+5. Organize them by course/topic
+6. Start training for the exam
+```
+
+Example categories:
+
+```text
+Software Security
+Secure Software Design
+JML
+JUnit
+Coverage
+FSM / EFSM / CFSM
+Mock Exams
+Mistakes to Review
+```
+
+---
+
+## Quick start
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run locally:
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+Build for production:
+
+```bash
+npm run build
+npm start
+```
+
+---
+
+## Deploy on Vercel
+
+### Option 1 — GitHub import
+
+1. Create a new GitHub repository.
+2. Push this project to the repository.
+3. Go to Vercel.
+4. Click **Add New → Project**.
+5. Import the GitHub repository.
+6. Keep the default Next.js settings.
+7. Click **Deploy**.
+
+That is enough for the default version with no login.
+
+### Option 2 — Vercel CLI
 
 ```bash
 npm i -g vercel
-cd pss-quiz-hub
-vercel          # segui le domande (accetta i default)
-vercel --prod   # deploy in produzione
+vercel
+vercel --prod
 ```
 
 ---
 
-## 3) Come si usa
+## Add it to your iPad Home Screen
 
-1. Apri l'app e premi **＋ Carica quiz** (o trascina i file).
-2. Carica gli HTML che hai già (es. `pss_exam_trainer.html`, `quiz_pss_laboratorio.html`, `laboratorio_esercizi_pss.html`). Puoi caricarne più d'uno insieme.
-3. Da **⋯** su ogni scheda puoi assegnare una **categoria** (es. *Teoria*, *Laboratorio*, *Ripasso*), scrivere una **nota** o rinominare/eliminare. La stella li mette tra i **preferiti**.
-4. **▶ Apri** esegue il quiz a tutto schermo. Il pulsante ↻ lo ricarica; ⤢ va a schermo intero.
-
-> I quiz sono salvati **solo su quel dispositivo**. Se apri l'app su un altro device, la libreria sarà vuota: ricarica lì i file. (È la scelta "storage locale" che hai indicato: semplice e gratis.)
+1. Open the deployed Vercel URL in **Safari**.
+2. Tap **Share**.
+3. Tap **Add to Home Screen**.
+4. Launch QuizHub like a native study app.
 
 ---
 
-## 4) (Opzionale) Attivare il login con Google
+## Optional Google login
 
-L'app è pensata per funzionare **offline**, quindi di default il login è **disattivato** (con storage locale non protegge alcun dato condiviso). Se vuoi comunque un cancello con Google:
+Google login is available through **NextAuth / Auth.js**, but it is disabled by default.
 
-1. **Google Cloud Console** → crea un progetto → **API e servizi → Schermata consenso OAuth** (tipo *Esterno*; in modalità *Testing* aggiungi la tua email tra i *Test users*, oppure pubblica l'app).
-2. **Credenziali → Crea credenziali → ID client OAuth → Applicazione web**.
-   - In **URI di reindirizzamento autorizzati** aggiungi:
-     `https://IL-TUO-DOMINIO.vercel.app/api/auth/callback/google`
-   - (Se usi anche i deploy di anteprima, aggiungi pure i relativi domini.)
-   - Copia **Client ID** e **Client secret**.
-3. Su **Vercel → Settings → Environment Variables** aggiungi:
-   - `AUTH_ENABLED` = `true`
-   - `AUTH_SECRET` = una stringa casuale (genera con `openssl rand -base64 32`)
-   - `AUTH_GOOGLE_ID` = il Client ID
-   - `AUTH_GOOGLE_SECRET` = il Client secret
-4. **Ridploya** (Deployments → Redeploy) perché le variabili abbiano effetto.
+Create `.env.local` from `.env.example`:
 
-Note:
-- In modalità *Testing* Google mostra un avviso "app non verificata": prosegui con **Avanzate → Vai al sito** (o aggiungi la tua email come *test user*). Per toglierlo del tutto serve la verifica dell'app (privacy policy, dominio, ecc.): per uso personale non ne vale la pena.
-- Con il login **attivo l'uso offline non funziona** (senza rete non si può passare dal gate). Per studiare offline, lascia `AUTH_ENABLED=false`.
-
----
-
-## 5) Dettagli tecnici
-
-- **Next.js 14** (App Router), nessuna libreria UI esterna. Font di sistema Apple (New York / SF / SF Mono): zero download, resa nativa su iPad.
-- **PWA**: `manifest.webmanifest` + service worker (`public/sw.js`) che mette in cache l'app-shell per l'uso offline.
-- **Storage**: IndexedDB (`lib/db.js`), un record per quiz `{ id, name, html, folder, note, favorite, size, date }`.
-- **Esecuzione quiz**: `<iframe srcdoc>` con `sandbox="allow-scripts allow-same-origin allow-modals allow-popups allow-forms allow-downloads"`. `allow-same-origin` è necessario perché il `localStorage` interno del quiz (storico dei tentativi) persista; il contenuto resta comunque incapsulato nell'iframe. Poiché carichi HTML tuoi e fidati, è la scelta bilanciata corretta.
-- **Auth**: NextAuth v5 (Auth.js) con provider Google, attivabile via `AUTH_ENABLED`. Il gate è nel `middleware.js`.
-
-### Aggiornare l'app in futuro
-Se ti do una nuova versione: sostituisci i file nel repo (o fai `git push`) e Vercel ridploya da solo. Con la CLI: `vercel --prod`.
-
----
-
-## Struttura del progetto
-
+```bash
+cp .env.example .env.local
 ```
+
+Then configure:
+
+```env
+AUTH_ENABLED=true
+AUTH_SECRET=your-random-secret
+AUTH_GOOGLE_ID=your-google-client-id
+AUTH_GOOGLE_SECRET=your-google-client-secret
+```
+
+Google OAuth callback URL:
+
+```text
+https://YOUR-VERCEL-DOMAIN.vercel.app/api/auth/callback/google
+```
+
+Important note: if Google login is enabled, offline access is limited because authentication requires a network connection. For a pure offline study setup, keep:
+
+```env
+AUTH_ENABLED=false
+```
+
+---
+
+## Security notes
+
+QuizHub is designed for **HTML files you trust**.
+
+The quiz runner uses:
+
+```html
+<iframe srcdoc="..." sandbox="allow-scripts allow-same-origin allow-modals allow-popups allow-forms allow-downloads">
+```
+
+`allow-same-origin` is intentionally enabled so quiz files can persist their own `localStorage` data, such as attempts and scores.
+
+Recommended usage:
+
+- Upload only quiz HTML files you created or trust.
+- Do not use it as a public random-HTML hosting platform.
+- Do not commit `.env` files.
+- Keep `.env.example` only as a safe template.
+
+---
+
+## Tech stack
+
+- **Next.js 14**
+- **React 18**
+- **Auth.js / NextAuth v5** for optional Google login
+- **IndexedDB** for local quiz storage
+- **Service Worker** for PWA caching
+- **Vercel** for deployment
+- No external UI component library
+
+---
+
+## Project structure
+
+```text
 pss-quiz-hub/
 ├─ app/
-│  ├─ layout.jsx            # metadati PWA
-│  ├─ globals.css           # design (schedario, dorsi colorati)
-│  ├─ page.jsx              # libreria: upload, ricerca, categorie, note…
-│  ├─ login/page.jsx        # login Google (se attivo)
-│  ├─ run/[id]/page.jsx     # esecuzione del quiz nell'iframe
+│  ├─ layout.jsx
+│  ├─ globals.css
+│  ├─ page.jsx
+│  ├─ login/page.jsx
+│  ├─ run/[id]/page.jsx
 │  └─ api/auth/[...nextauth]/route.js
-├─ lib/db.js                # wrapper IndexedDB
-├─ components/SWRegister.jsx
-├─ public/                  # manifest, sw.js, icone
-├─ auth.js / auth.config.js # NextAuth (opzionale)
-├─ middleware.js            # gate di accesso
-├─ .env.example
-└─ package.json
+├─ components/
+│  └─ SWRegister.jsx
+├─ lib/
+│  └─ db.js
+├─ public/
+│  ├─ manifest.webmanifest
+│  ├─ sw.js
+│  ├─ icon-192.png
+│  ├─ icon-512.png
+│  └─ apple-touch-icon.png
+├─ auth.js
+├─ auth.config.js
+├─ middleware.js
+├─ next.config.mjs
+├─ package.json
+└─ README.md
 ```
+
+---
+
+## Recommended GitHub repository description
+
+```text
+QH QuizHub — offline-first PWA for students to upload, organize and run HTML exam quizzes on iPad, powered by Next.js and IndexedDB.
+```
+
+---
+
+## Recommended GitHub topics
+
+Use these topics in the GitHub repository sidebar:
+
+```text
+quiz
+quiz-app
+education
+students
+student-tools
+exam-prep
+study-tool
+learning
+university
+pwa
+offline-first
+nextjs
+react
+vercel
+indexeddb
+localstorage
+html-runner
+ipad
+self-hosted
+productivity
+```
+
+For your specific course/project, you can also add:
+
+```text
+software-security
+junit
+jml
+testing
+coverage
+secure-software-design
+```
+
+---
+
+## Roadmap ideas
+
+- Import/export the whole quiz library as a `.json` backup.
+- Cloud sync across devices.
+- Per-quiz study statistics.
+- Built-in quiz generator.
+- Timer mode for exam simulations.
+- Tags per quiz, not only folders.
+- Password/PIN gate for offline mode.
+
+---
+
+## License
+
+Released under the **MIT License**.
+
+---
+
+<div align="center">
+
+**QuizHub <kbd>QH</kbd> — keep your exam grind organized.**
+
+</div>
