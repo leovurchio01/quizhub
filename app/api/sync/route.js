@@ -3,7 +3,8 @@
 // ------------------------------------------------------------
 //  - Richiede login (cookie di sessione): ogni utente vede SOLO il suo blob.
 //  - Storage: Vercel KV / Upstash Redis via REST (nessuna dipendenza).
-//    Configurato con KV_REST_API_URL + KV_REST_API_TOKEN.
+//    Accetta i nomi di Vercel KV (KV_REST_API_URL/TOKEN) e di Upstash
+//    (UPSTASH_REDIS_REST_URL/TOKEN) a seconda dell'integrazione scelta.
 //  - Il client può cifrare il blob prima dell'upload (spazi vault):
 //    il server conserva solo ciphertext opaco.
 //  - Se KV non è configurato: 501, l'app resta local-first.
@@ -16,15 +17,19 @@ export const runtime = "nodejs";
 const MAX_BLOB = 8 * 1024 * 1024; // 8 MB per utente
 const SECRET = process.env.AUTH_SECRET || "insecure-dev-secret-set-AUTH_SECRET-in-prod";
 
+// Supporta sia i nomi di Vercel KV sia quelli di Upstash.
+const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+
 function kvConfigured() {
-  return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
+  return !!(KV_URL && KV_TOKEN);
 }
 
 async function kv(command) {
-  const res = await fetch(process.env.KV_REST_API_URL, {
+  const res = await fetch(KV_URL, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.KV_REST_API_TOKEN}`,
+      Authorization: `Bearer ${KV_TOKEN}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(command),
