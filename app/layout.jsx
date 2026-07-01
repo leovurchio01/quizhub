@@ -1,5 +1,6 @@
 import "./globals.css";
 import SWRegister from "@/components/SWRegister";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata = {
   title: "PSS Quiz Hub",
@@ -28,6 +29,7 @@ export default function RootLayout({ children }) {
       <body>
         {children}
         <SWRegister />
+        <Analytics />
       </body>
     </html>
   );
