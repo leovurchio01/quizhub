@@ -1,7 +1,7 @@
 // ============================================================
 //  QuizHub OS — sync cloud opzionale (zero-knowledge)
 // ------------------------------------------------------------
-//  - Richiede login (next-auth): ogni utente vede SOLO il suo blob.
+//  - Richiede login (cookie di sessione): ogni utente vede SOLO il suo blob.
 //  - Storage: Vercel KV / Upstash Redis via REST (nessuna dipendenza).
 //    Configurato con KV_REST_API_URL + KV_REST_API_TOKEN.
 //  - Il client può cifrare il blob prima dell'upload (spazi vault):
@@ -9,10 +9,12 @@
 //  - Se KV non è configurato: 501, l'app resta local-first.
 // ============================================================
 
-import { auth } from "@/auth";
+import { cookies } from "next/headers";
+import { verifySession } from "@/lib/jwt";
 
 export const runtime = "nodejs";
 const MAX_BLOB = 8 * 1024 * 1024; // 8 MB per utente
+const SECRET = process.env.AUTH_SECRET || "insecure-dev-secret-set-AUTH_SECRET-in-prod";
 
 function kvConfigured() {
   return !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN);
@@ -33,11 +35,11 @@ async function kv(command) {
 }
 
 async function userId() {
-  const session = await auth();
-  const u = session?.user;
-  if (!u) return null;
-  // sub/email come chiave stabile e non indovinabile lato client.
-  return u.id || u.email || null;
+  const raw = cookies().get("qh_session")?.value;
+  if (!raw) return null;
+  const payload = await verifySession(raw, SECRET);
+  // sub Google come chiave stabile e non indovinabile lato client.
+  return payload?.sub || null;
 }
 
 export async function GET() {

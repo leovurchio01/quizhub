@@ -1,20 +1,59 @@
 "use client";
-import { useEffect, useState } from "react";
-import { signIn } from "next-auth/react";
+import { useEffect, useRef, useState } from "react";
+
+const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
 export default function LoginPage() {
-  const [enabled, setEnabled] = useState(true);
+  const btnRef = useRef(null);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
   useEffect(() => {
-    // Se l'auth è disattivata, la home è aperta: reindirizza.
-    fetch("/api/auth/providers")
-      .then((r) => r.json())
-      .then((p) => {
-        if (!p || Object.keys(p).length === 0) {
-          setEnabled(false);
-          window.location.href = "/";
-        }
-      })
-      .catch(() => {});
+    // Login non configurato: la home è aperta, torna indietro.
+    if (!CLIENT_ID) {
+      window.location.href = "/";
+      return;
+    }
+
+    async function handleCredential(resp) {
+      setBusy(true);
+      setErr("");
+      try {
+        const r = await fetch("/api/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credential: resp.credential }),
+        });
+        if (r.ok) window.location.href = "/";
+        else setErr("Accesso non riuscito. Riprova.");
+      } catch {
+        setErr("Errore di rete.");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    const s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true;
+    s.defer = true;
+    s.onload = () => {
+      if (!window.google?.accounts?.id) return;
+      window.google.accounts.id.initialize({ client_id: CLIENT_ID, callback: handleCredential });
+      if (btnRef.current) {
+        window.google.accounts.id.renderButton(btnRef.current, {
+          theme: "filled_blue",
+          size: "large",
+          shape: "pill",
+          text: "signin_with",
+          logo_alignment: "left",
+        });
+      }
+      // One Tap opzionale
+      window.google.accounts.id.prompt();
+    };
+    document.body.appendChild(s);
+    return () => s.remove();
   }, []);
 
   return (
@@ -30,15 +69,16 @@ export default function LoginPage() {
         <p style={{ color: "var(--muted)", margin: "0 auto 22px", maxWidth: 320 }}>
           Accedi con Google per attivare gli spazi personali e la sincronizzazione cloud cifrata.
         </p>
-        {enabled ? (
-          <button className="btn primary" style={{ width: "100%" }} onClick={() => signIn("google", { callbackUrl: "/" })}>
-             Accedi con Google
-          </button>
-        ) : (
-          <p className="count">Reindirizzamento…</p>
-        )}
+
+        <div ref={btnRef} style={{ display: "flex", justifyContent: "center", minHeight: 44 }} />
+        {busy && <p className="count" style={{ marginTop: 12 }}>Accesso in corso…</p>}
+        {err && <p className="count" style={{ marginTop: 12, color: "var(--bad)" }}>{err}</p>}
+
         <p className="hint" style={{ marginTop: 18 }}>
-          I tuoi quiz restano cifrati sul dispositivo. Il login serve solo per il sync opzionale.
+          Nessun dato lascia il dispositivo senza il tuo consenso. Il login serve solo per il sync opzionale.
+        </p>
+        <p className="hint" style={{ marginTop: 6 }}>
+          <a onClick={() => (window.location.href = "/")} style={{ cursor: "pointer", color: "var(--brand-ink)" }}>← Continua senza accedere</a>
         </p>
       </div>
     </div>

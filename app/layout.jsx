@@ -1,16 +1,35 @@
 import "./globals.css";
 import SWRegister from "@/components/SWRegister";
 
+const SITE_URL = "https://quizhub-psi.vercel.app";
+const DESCRIPTION =
+  "A computer inside your browser for running quizzes, exams and presentations as self-contained HTML. Local-first, zero-knowledge, sandbox-isolated, installable PWA.";
+
 export const metadata = {
-  title: "QuizHub OS — lettore quiz HTML",
-  description:
-    "Il tuo computer nel browser per leggere quiz, esami e presentazioni HTML. Local-first, sandbox blindata, spazi multi-utente.",
-  manifest: "/manifest.webmanifest",
+  metadataBase: new URL(SITE_URL),
+  title: { default: "QuizHub OS — run HTML quizzes securely", template: "%s · QuizHub OS" },
+  description: DESCRIPTION,
   applicationName: "QuizHub OS",
+  keywords: ["quiz", "exam", "study", "HTML", "PWA", "local-first", "flashcards", "sandbox", "iPad"],
+  manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "QuizHub OS" },
   icons: {
     icon: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
     apple: [{ url: "/apple-touch-icon.png" }],
+  },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: "QuizHub OS",
+    title: "QuizHub OS — run HTML quizzes securely",
+    description: DESCRIPTION,
+    images: [{ url: "/icon-512.png", width: 512, height: 512, alt: "QuizHub OS" }],
+  },
+  twitter: {
+    card: "summary",
+    title: "QuizHub OS — run HTML quizzes securely",
+    description: DESCRIPTION,
+    images: ["/icon-512.png"],
   },
   formatDetection: { telephone: false },
 };

@@ -207,6 +207,35 @@ button { font-family: inherit; }
 .chip .n { font-family: var(--font-mono); font-size: 0.7rem; opacity: 0.75; }
 .chip.star.on { background: linear-gradient(135deg, var(--gold), #ffa63d); color: #241a00; }
 
+/* ---------- workspace: pannello cartelle + libreria ---------- */
+.workspace { display: grid; grid-template-columns: 244px 1fr; gap: 20px; align-items: start; }
+@media (max-width: 860px) { .workspace { grid-template-columns: 1fr; } }
+.folderpanel { position: sticky; top: 76px; background: var(--panel); border: 1px solid var(--stroke);
+  border-radius: var(--radius); padding: 12px; backdrop-filter: blur(12px); max-height: calc(100vh - 100px); overflow: auto; }
+@media (max-width: 860px) { .folderpanel { position: static; max-height: none; } }
+.folderpanel .fp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.folderpanel .fp-head h4 { margin: 0; font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--faint); }
+.tree { display: flex; flex-direction: column; gap: 1px; }
+.tnode { display: flex; align-items: center; gap: 4px; padding: 6px 8px; border-radius: 9px; cursor: pointer;
+  color: var(--muted); font-size: 0.86rem; user-select: none; transition: 0.12s; }
+.tnode:hover { background: var(--panel-2); color: var(--ink); }
+.tnode.on { background: linear-gradient(135deg, rgba(91,140,255,0.22), rgba(124,92,255,0.16)); color: var(--ink);
+  border: 1px solid var(--stroke-strong); }
+.tnode.drop { background: rgba(33, 230, 193, 0.16); outline: 1px dashed var(--accent); }
+.tnode .caret { width: 14px; flex: 0 0 14px; text-align: center; color: var(--faint); font-size: 0.7rem; transition: transform 0.12s; }
+.tnode .caret.open { transform: rotate(90deg); }
+.tnode .fic { flex: 0 0 auto; }
+.tnode .lbl { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tnode .cnt { font-family: var(--font-mono); font-size: 0.66rem; opacity: 0.7; }
+.tnode .mini { opacity: 0; font-size: 0.72rem; padding: 0 3px; }
+.tnode:hover .mini { opacity: 0.7; }
+.tnode .mini:hover { opacity: 1; color: var(--ink); }
+.tchildren { margin-left: 10px; border-left: 1px solid var(--stroke); padding-left: 4px; }
+.crumbs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; font-size: 0.84rem; color: var(--muted); }
+.crumbs a { cursor: pointer; } .crumbs a:hover { color: var(--ink); }
+.crumbs .sep { color: var(--faint); }
+
 /* ---------- grid + quiz card ---------- */
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
 .qcard { position: relative; background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--radius);
