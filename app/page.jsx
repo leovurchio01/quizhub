@@ -10,10 +10,20 @@ import {
   listQuizzes,
   patchQuiz,
   deleteQuiz,
+  restoreQuiz,
+  purgeQuiz,
+  emptyTrash,
+  listTrash,
+  trashCount,
+  updateSpace,
   addQuizFromFile,
   spaceStats,
   exportSpace,
   importIntoSpace,
+  exportEverything,
+  importEverything,
+  requestPersistence,
+  storageInfo,
   setVaultKey,
   clearVaultKey,
   hasVaultKey,
@@ -80,6 +90,10 @@ export default function Desktop() {
   const [unlockFor, setUnlockFor] = useState(null);
   const [palette, setPalette] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [storage, setStorage] = useState(null);
+  const [trash, setTrash] = useState(0);
+  const [showTrash, setShowTrash] = useState(false);
+  const [trashList, setTrashList] = useState([]);
   const fileRef = useRef(null);
   const importRef = useRef(null);
 
@@ -96,6 +110,9 @@ export default function Desktop() {
       setActiveId(s.some((x) => x.id === saved) ? saved : s[0].id);
       const t = typeof localStorage !== "undefined" ? localStorage.getItem("qh-theme") : null;
       setTheme(t === "light" ? "light" : "dark");
+      // Chiede al browser di rendere lo storage persistente (anti-sfratto).
+      await requestPersistence().catch(() => {});
+      setStorage(await storageInfo().catch(() => null));
     })().catch(() => setSpaces([]));
     fetch("/api/session").then((r) => r.json()).then((s) => setSession(s?.user ? s : null)).catch(() => setSession(null));
   }, []);
@@ -113,8 +130,8 @@ export default function Desktop() {
   }, []);
 
   const refresh = useCallback(async (sid = activeId) => {
-    const [list, st, fp] = await Promise.all([listQuizzes(sid), spaceStats(sid), getFolders(sid)]);
-    setQuizzes(list); setStats(st); setFolderPaths(fp);
+    const [list, st, fp, tc] = await Promise.all([listQuizzes(sid), spaceStats(sid), getFolders(sid), trashCount(sid)]);
+    setQuizzes(list); setStats(st); setFolderPaths(fp); setTrash(tc);
   }, [activeId]);
 
   useEffect(() => {
@@ -152,8 +169,46 @@ export default function Desktop() {
     setEditing(null); refresh(); flash("Salvato");
   }
   async function removeQuiz(x) {
-    if (!confirm(`Eliminare "${x.name}"? Non si può annullare.`)) return;
-    await deleteQuiz(x.id); setEditing(null); refresh(); flash("Quiz eliminato");
+    await deleteQuiz(x.id); setEditing(null); refresh(); flash("Spostato nel cestino 🗑");
+  }
+
+  /* ---- cestino ---- */
+  async function openTrash() {
+    setTrashList(await listTrash(activeId));
+    setShowTrash(true);
+  }
+  async function doRestore(id) { await restoreQuiz(id); setTrashList(await listTrash(activeId)); refresh(); flash("Quiz ripristinato"); }
+  async function doPurge(id) {
+    if (!confirm("Eliminare DEFINITIVAMENTE questo quiz? Non è recuperabile.")) return;
+    await purgeQuiz(id); setTrashList(await listTrash(activeId)); refresh(); flash("Eliminato definitivamente");
+  }
+  async function doEmptyTrash() {
+    if (!confirm("Svuotare il cestino? I quiz dentro verranno eliminati per sempre.")) return;
+    const n = await emptyTrash(activeId); setTrashList([]); setShowTrash(false); refresh(); flash(`Cestino svuotato (${n})`);
+  }
+
+  /* ---- rinomina/ricolora spazio ---- */
+  async function renameSpace(patch) {
+    await updateSpace(activeId, patch);
+    setSpaces(await listSpaces());
+    flash("Spazio aggiornato");
+  }
+
+  /* ---- persistenza ---- */
+  async function askPersistence() {
+    const ok = await requestPersistence();
+    setStorage(await storageInfo());
+    flash(ok ? "Storage reso persistente 🔒" : "Il browser non ha concesso la persistenza");
+  }
+
+  /* ---- backup COMPLETO (tutti gli spazi) ---- */
+  async function doFullExport() {
+    const data = await exportEverything();
+    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `quizhub-backup-completo-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click(); URL.revokeObjectURL(a.href); flash("Backup completo scaricato ⤓");
   }
 
   /* ---- cartelle ---- */
@@ -232,8 +287,19 @@ export default function Desktop() {
     a.click(); URL.revokeObjectURL(a.href); flash("Backup esportato");
   }
   async function doImport(file) {
-    try { const payload = JSON.parse(await file.text()); const n = await importIntoSpace(activeId, payload); refresh(); flash(`${n} quiz importati`); }
-    catch { flash("Import non valido"); }
+    try {
+      const payload = JSON.parse(await file.text());
+      if (payload?.format === "quizhub-os-full") {
+        const r = await importEverything(payload);
+        setSpaces(await listSpaces());
+        refresh();
+        flash(`Backup ripristinato: ${r.spaces} spazi, ${r.quizzes} quiz`);
+      } else {
+        const n = await importIntoSpace(activeId, payload);
+        refresh();
+        flash(`${n} quiz importati`);
+      }
+    } catch { flash("File non valido"); }
   }
   async function doSync(dir) {
     if (locked) return flash("Sblocca lo spazio per sincronizzare");
@@ -351,6 +417,12 @@ export default function Desktop() {
                 <span>{locked ? "Spazio cifrato — bloccato" : "Libreria quiz · esami · presentazioni"}</span>
                 {activeSpace?.vault && <span className="pill">🔒 vault cifrato</span>}
                 {activeSpace?.owner && activeSpace.owner !== "local" && <span className="pill">{activeSpace.owner}</span>}
+                {storage && storage.supported && !storage.persisted && (
+                  <span className="pill" style={{ cursor: "pointer", color: "var(--gold)", borderColor: "var(--gold)" }}
+                    title="Il browser potrebbe cancellare i dati sotto pressione. Clicca per proteggerli." onClick={askPersistence}>
+                    ⚠︎ storage non protetto — attiva
+                  </span>
+                )}
               </div>
             </div>
             {!locked && (
@@ -439,8 +511,11 @@ export default function Desktop() {
                       <input type="search" placeholder="Cerca per nome, nota, cartella o tag…" value={q} onChange={(e) => setQ(e.target.value)} />
                     </div>
                     <button className={"chip star" + (favOnly ? " on" : "")} onClick={() => setFavOnly((v) => !v)}>★ Preferiti</button>
-                    <button className="iconbtn" title="Esporta backup" onClick={doExport}>⤓</button>
-                    <button className="iconbtn" title="Importa backup" onClick={() => importRef.current?.click()}>⤒</button>
+                    <button className="iconbtn" title="Esporta questo spazio" onClick={doExport}>⤓</button>
+                    <button className="iconbtn" title="Importa" onClick={() => importRef.current?.click()}>⤒</button>
+                    <button className="iconbtn" title={`Cestino (${trash})`} onClick={openTrash} style={trash ? { borderColor: "var(--gold)", color: "var(--gold)" } : undefined}>
+                      🗑{trash ? <span style={{ fontFamily: "var(--font-mono)", fontSize: ".62rem", marginLeft: 2 }}>{trash}</span> : null}
+                    </button>
                   </div>
 
                   {crumbs.length > 0 && (
@@ -509,11 +584,18 @@ export default function Desktop() {
       {showSpaceDlg && <SpaceDialog onClose={() => setShowSpaceDlg(false)} onCreate={onCreateSpace} />}
       {unlockFor && <UnlockDialog space={unlockFor} onClose={() => setUnlockFor(null)} onUnlock={doUnlock} />}
       {showManage && activeSpace && (
-        <ManageDialog space={activeSpace} onClose={() => setShowManage(false)}
+        <ManageDialog space={activeSpace} storage={storage} trash={trash} onClose={() => setShowManage(false)}
+          onRenameSpace={renameSpace} onPersist={askPersistence}
           onExport={doExport} onImport={() => importRef.current?.click()}
+          onFullExport={doFullExport}
           onSyncPush={() => doSync("push")} onSyncPull={() => doSync("pull")}
+          onTrash={() => { setShowManage(false); openTrash(); }}
           onLock={() => { clearVaultKey(activeSpace.id); setSpaces((s) => [...s]); setShowManage(false); flash("Vault bloccato 🔒"); }}
           onDelete={() => onDeleteSpace(activeSpace.id)} />
+      )}
+      {showTrash && (
+        <TrashDialog items={trashList} onClose={() => setShowTrash(false)}
+          onRestore={doRestore} onPurge={doPurge} onEmpty={doEmptyTrash} />
       )}
       {palette && (
         <Palette quizzes={quizzes || []} spaces={spaces} onClose={() => setPalette(false)}
@@ -583,7 +665,7 @@ function EditSheet({ quiz, folders, onClose, onSave, onDelete }) {
           <button className="btn subtle" onClick={onClose}>Annulla</button>
           <button className="btn primary" onClick={() => onSave({ name: name.trim() || quiz.name, folder: folder.trim().replace(/^\/+|\/+$/g, ""), note, tags: tags.split(",").map((t) => t.trim()).filter(Boolean) })}>Salva</button>
         </div>
-        <div className="row"><button className="btn danger" onClick={onDelete}>Elimina quiz</button></div>
+        <div className="row"><button className="btn danger" onClick={onDelete}>🗑 Sposta nel cestino</button></div>
       </div>
     </div>
   );
@@ -641,17 +723,78 @@ function UnlockDialog({ space, onClose, onUnlock }) {
   );
 }
 
-function ManageDialog({ space, onClose, onExport, onImport, onSyncPush, onSyncPull, onLock, onDelete }) {
+function ManageDialog({ space, storage, trash, onClose, onRenameSpace, onPersist, onExport, onImport, onFullExport, onSyncPush, onSyncPull, onTrash, onLock, onDelete }) {
+  const COLORS = ["#5b8cff", "#21e6c1", "#ffcf5c", "#7c5cff", "#ff5d73", "#34e39a", "#ff8ac4"];
+  const [name, setName] = useState(space.name);
+  const [color, setColor] = useState(space.color || COLORS[0]);
+  const dirty = name.trim() !== space.name || color !== space.color;
+  const pct = storage?.quota ? Math.min(100, Math.round((storage.usage / storage.quota) * 100)) : 0;
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()}>
-        <h3>Gestisci “{space.name}”</h3>
-        <p className="lead">Backup, sincronizzazione e sicurezza dello spazio.</p>
-        <div className="row"><button className="btn ghost" onClick={onExport}>⤓ Esporta backup</button><button className="btn ghost" onClick={onImport}>⤒ Importa backup</button></div>
+      <div className="sheet" style={{ maxHeight: "86vh", overflow: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <h3>Gestisci spazio</h3>
+
+        <div className="field"><label>Nome spazio</label><input value={name} onChange={(e) => setName(e.target.value)} /></div>
+        <div className="field"><label>Colore</label>
+          <div className="swatches">{COLORS.map((c) => <span key={c} className={"swatch" + (c === color ? " on" : "")} style={{ background: c }} onClick={() => setColor(c)} />)}</div>
+        </div>
+        <div className="row"><button className="btn primary" disabled={!dirty} onClick={() => onRenameSpace({ name: name.trim() || space.name, color })}>Salva modifiche</button></div>
+
+        <hr style={{ border: 0, borderTop: "1px solid var(--stroke)", margin: "16px 0" }} />
+
+        <label style={{ fontSize: ".72rem", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em" }}>Sicurezza dati</label>
+        <p className="lead" style={{ margin: "6px 0 10px" }}>
+          {storage?.persisted
+            ? "✅ Storage persistente: il browser non cancellerà i tuoi dati."
+            : "⚠︎ Storage non protetto: attivalo per evitare che il browser lo cancelli."}
+          {storage?.quota ? ` · ${fmtSize(storage.usage)} usati (${pct}%).` : ""}
+        </p>
+        {!storage?.persisted && <div className="row"><button className="btn ghost" onClick={onPersist}>🔒 Proteggi lo storage</button></div>}
+
+        <label style={{ fontSize: ".72rem", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em" }}>Backup & ripristino</label>
+        <div className="row" style={{ marginTop: 8 }}><button className="btn ghost" onClick={onExport}>⤓ Esporta questo spazio</button><button className="btn ghost" onClick={onImport}>⤒ Importa / Ripristina</button></div>
+        <div className="row"><button className="btn ghost" onClick={onFullExport}>💾 Backup COMPLETO (tutti gli spazi)</button></div>
         <div className="row"><button className="btn ghost" onClick={onSyncPush}>☁︎ Carica nel cloud</button><button className="btn ghost" onClick={onSyncPull}>⇩ Scarica dal cloud</button></div>
-        {space.vault && <div className="row"><button className="btn subtle" onClick={onLock}>🔒 Blocca vault ora</button></div>}
-        {space.id !== "local" && <div className="row"><button className="btn danger" onClick={onDelete}>Elimina spazio</button></div>}
+
+        <label style={{ fontSize: ".72rem", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em" }}>Manutenzione</label>
+        <div className="row" style={{ marginTop: 8 }}>
+          <button className="btn subtle" onClick={onTrash}>🗑 Cestino{trash ? ` (${trash})` : ""}</button>
+          {space.vault && <button className="btn subtle" onClick={onLock}>🔒 Blocca vault</button>}
+        </div>
+        {space.id !== "local" && <div className="row"><button className="btn danger" onClick={onDelete}>Elimina spazio e tutto il contenuto</button></div>}
         <div className="row"><button className="btn subtle" onClick={onClose}>Chiudi</button></div>
+      </div>
+    </div>
+  );
+}
+
+function TrashDialog({ items, onClose, onRestore, onPurge, onEmpty }) {
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" style={{ maxHeight: "86vh", overflow: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <h3>Cestino 🗑</h3>
+        <p className="lead">I quiz eliminati restano qui. Puoi ripristinarli o eliminarli per sempre.</p>
+        {items.length === 0 ? (
+          <p className="count" style={{ padding: "12px 0" }}>Il cestino è vuoto.</p>
+        ) : (
+          <div className="pallist" style={{ maxHeight: "52vh" }}>
+            {items.map((x) => (
+              <div key={x.id} className="palitem" style={{ cursor: "default" }}>
+                <span className="ic">🗑</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{x.name}</div>
+                  <div className="subt">{x.folder || "senza cartella"}{x.encrypted ? " · 🔒" : ""}</div>
+                </div>
+                <button className="btn subtle sm" onClick={() => onRestore(x.id)}>Ripristina</button>
+                <button className="btn danger sm" onClick={() => onPurge(x.id)}>Elimina</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="row" style={{ marginTop: 12 }}>
+          {items.length > 0 && <button className="btn danger" onClick={onEmpty}>Svuota cestino</button>}
+          <button className="btn subtle" onClick={onClose}>Chiudi</button>
+        </div>
       </div>
     </div>
   );
