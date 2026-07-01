@@ -1,262 +1,181 @@
 <div align="center">
 
-# QuizHub <kbd>QH</kbd>
+# QuizHub OS <kbd>QH</kbd>
 
-![QuizHub](https://img.shields.io/badge/QH-QuizHub-ff9900?style=for-the-badge&labelColor=111111)
+![QuizHub OS](https://img.shields.io/badge/QH-QuizHub_OS-5b8cff?style=for-the-badge&labelColor=070b16)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=nextdotjs)
-![PWA](https://img.shields.io/badge/PWA-offline--ready-5A67D8?style=for-the-badge)
-![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=for-the-badge&logo=vercel)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![PWA](https://img.shields.io/badge/PWA-offline--ready-7c5cff?style=for-the-badge)
+![Security](https://img.shields.io/badge/Sandbox-isolated-21e6c1?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-34e39a?style=for-the-badge)
 
-**Your personal exam-quiz vault. Upload HTML quizzes, organize them like a study library, and run them anywhere — especially on iPad.**
+**Un computer nel browser per leggere quiz, esami e presentazioni HTML.**
+Local-first, spazi multi-utente, sandbox blindata, cifratura end-to-end e sync cloud opzionale.
 
-Built for students who want a clean, fast, offline-friendly place to keep serious exam trainers without paying for a database or installing an app.
-
-[Features](#features) • [Demo flow](#demo-flow) • [Quick start](#quick-start) • [Deploy on Vercel](#deploy-on-vercel) • [Google login](#optional-google-login) • [Tech stack](#tech-stack)
+[Cosa c'è di nuovo](#cosa-cè-di-nuovo-in-v2) • [Sicurezza](#modello-di-sicurezza) • [Funzioni](#funzioni) • [Avvio rapido](#avvio-rapido) • [Deploy](#deploy-su-vercel) • [Login & sync](#login-google-e-sync-cloud-opzionali)
 
 </div>
 
 ---
 
-## What is QuizHub?
+## Cos'è QuizHub OS?
 
-**QuizHub** is a small but polished **Next.js PWA** that lets you upload and run your own **self-contained HTML quiz files** from the browser.
+**QuizHub OS** è una **PWA Next.js** che trasforma il browser in un piccolo "sistema operativo" per lo studio: carichi i tuoi **file HTML autoconsistenti** (quiz, trainer d'esame, slide, flashcard) e li apri in una **finestra isolata e sicura**, con tab multiple, come se fossero app.
 
-It was designed for university exam prep: you generate or collect HTML quizzes, upload them once, organize them by subject, and open them later from your iPad like a real study app.
+Nato per la preparazione agli esami universitari: generi o raccogli quiz HTML, li carichi una volta, li organizzi per spazio/categoria e li apri quando vuoi — anche **offline**, anche **su iPad**.
 
-No backend database. No subscriptions. No cloud storage required.
-
-Your quizzes stay in your browser using **IndexedDB**, and each quiz can keep its own internal progress/history using `localStorage`.
+Nessun database obbligatorio. I quiz vivono nel tuo browser (**IndexedDB**); il cloud è **opzionale**.
 
 ---
 
-## Why students will like it
+## Cosa c'è di nuovo in v2
 
-- **Perfect for exam season** — keep theory quizzes, lab trainers, mock exams and flashcard-style HTML tools in one place.
-- **iPad-friendly** — deploy it, open it in Safari, then add it to the Home Screen like an app.
-- **Offline-first mindset** — great for trains, libraries, classrooms, and study sessions with bad Wi-Fi.
-- **Local-first privacy** — your uploaded quiz files stay on the device unless you choose to share/deploy something yourself.
-- **No database setup** — Vercel + browser storage is enough.
-- **Simple but serious** — search, folders, favorites, notes, rename, delete and full-screen quiz runner.
+Rispetto alla v1 (`PSS Quiz Hub`), questa versione è una riscrittura completa:
 
----
+| Area | v1 | v2 — QuizHub OS |
+|---|---|---|
+| **Sicurezza runner** | `iframe` con `allow-scripts` **+ `allow-same-origin`** → un quiz malevolo poteva evadere la sandbox e leggere la tua sessione/IndexedDB | Sandbox **senza `allow-same-origin`** (origine opaca) + **CSP severa** + header di sicurezza. Isolamento reale. |
+| **Utenti** | singola libreria per dispositivo | **spazi multipli** isolati (dock stile OS), legati opzionalmente all'account Google |
+| **Dati** | quiz in chiaro | **cifratura AES-256 end-to-end** opzionale per-spazio (vault con passphrase) |
+| **Runner** | pagina singola | **finestra con tab multiple**, zoom, fullscreen, **timer d'esame** |
+| **Persistenza quiz** | `localStorage` diretto | **ponte storage** via `postMessage`: i progressi si salvano (cifrati) senza aprire la sandbox |
+| **Studio** | ricerca, cartelle, preferiti, note | + **tag**, **statistiche**, **ricerca full-text**, **command palette** (⌘K) |
+| **Backup** | — | **export/import** JSON portabile |
+| **Cloud** | — | **sync opzionale zero-knowledge** (Vercel KV/Upstash) |
+| **Stile** | tema chiaro "carta" | tema **scuro/chiaro** futuristico: vetro, neon, griglia |
 
-## Features
-
-### Quiz library
-
-- Upload one or multiple `.html` quiz files.
-- Store quizzes locally in **IndexedDB**.
-- Search by name, folder/category or notes.
-- Add folders/categories such as `Theory`, `Lab`, `Mock Exam`, `Weak Topics`.
-- Mark quizzes as favorites.
-- Rename quizzes.
-- Add personal notes.
-- Delete quizzes when you no longer need them.
-
-### Quiz runner
-
-- Opens each HTML quiz inside a dedicated runner page.
-- Uses an `iframe srcdoc` approach so the quiz runs directly in-browser.
-- Keeps `localStorage` available inside the quiz, useful for quiz history, scores and saved attempts.
-- Includes quick actions such as reload and fullscreen.
-
-### PWA experience
-
-- Installable from Safari / Chrome / Edge.
-- Works well as an iPad Home Screen app.
-- Includes manifest, service worker and app icons.
-- Caches the app shell for fast access.
-
-### Optional Google login
-
-- Google authentication is included but disabled by default.
-- Useful if you deploy the app publicly and want a simple access gate.
-- Can be enabled with environment variables.
-
-> By default, QuizHub is open and local-first because the uploaded quizzes are saved in the browser, not in a shared cloud database.
+> ⚠️ **Migrazione automatica:** i quiz della v1 vengono spostati nello **Spazio locale** al primo avvio (nessuna perdita di dati).
 
 ---
 
-## Demo flow
+## Modello di sicurezza
 
-```text
-1. Deploy QuizHub on Vercel
-2. Open it on your iPad
-3. Add it to Home Screen
-4. Upload your quiz HTML files
-5. Organize them by course/topic
-6. Start training for the exam
-```
+La priorità è che **un HTML caricato non possa fare male alla tua app o ai tuoi altri dati**.
 
-Example categories:
+1. **Isolamento del runner.** I quiz girano in un `iframe` con `sandbox="allow-scripts …"` **ma senza `allow-same-origin`**: hanno un'**origine opaca**, quindi **non** possono leggere cookie, `localStorage`, IndexedDB, né chiamare le API della shell. *(È il fix del buco più grave della v1.)*
+2. **Ponte storage sicuro.** Senza `allow-same-origin` il `localStorage` del quiz è finto: viene inizializzato da uno snapshot e ogni scrittura è rispecchiata alla shell via `postMessage` (con token di verifica), che la salva in IndexedDB. Così i progressi persistono **senza** concedere accesso all'origine.
+3. **Cifratura a riposo (vault).** Ogni spazio può essere cifrato **AES-GCM 256** con chiave derivata via **PBKDF2 (210k iter, SHA-256)**. La passphrase e la chiave vivono **solo in memoria**; il server (se usi il sync) vede solo ciphertext.
+4. **Header HTTP.** `Content-Security-Policy` severa, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`, `COOP/CORP`, `HSTS` (vedi [`next.config.mjs`](next.config.mjs)).
+5. **Integrità.** Ogni quiz ha un fingerprint `SHA-256` del contenuto.
 
-```text
-Software Security
-Secure Software Design
-JML
-JUnit
-Coverage
-FSM / EFSM / CFSM
-Mock Exams
-Mistakes to Review
-```
+> Nota: "sicurezza al massimo" qui significa **isolamento e riservatezza locale**. La responsabilità del contenuto dei quiz resta tua: apri solo file di cui ti fidi.
 
 ---
 
-## Quick start
+## Funzioni
 
-Install dependencies:
+### Spazi (multi-utente)
+- Dock laterale con **spazi separati e isolati**, ognuno con colore e nome.
+- Spazi **cifrati** (vault) con lucchetto: blocca/sblocca al volo.
+- Ogni spazio ha le sue **statistiche** (quiz, preferiti, categorie, spazio usato).
+
+### Libreria
+- Carica uno o più `.html` (drag & drop incluso).
+- **Ricerca full-text** su nome, nota, categoria e **tag**.
+- Categorie, **preferiti**, note, tag, rinomina, elimina.
+- **Command palette** `⌘K` / `Ctrl+K` per saltare a quiz, spazi o comandi.
+
+### Runner "finestra desktop"
+- **Tab multiple**: apri più quiz nella stessa finestra.
+- **Zoom**, **schermo intero**, ricarica.
+- **Timer d'esame** con avvisi (giallo/rosso) e pausa.
+- Sandbox isolata con progressi persistenti.
+
+### Backup & sync
+- **Export/Import** JSON di un intero spazio.
+- **Sync cloud opzionale** (zero-knowledge) se configuri Vercel KV/Upstash.
+
+### PWA
+- Installabile (Safari/Chrome/Edge), ottima su iPad Home Screen.
+- App-shell in cache, funziona offline.
+
+---
+
+## Avvio rapido
+
+Serve **Node.js 18+**.
 
 ```bash
 npm install
-```
-
-Run locally:
-
-```bash
 npm run dev
+# http://localhost:3000
 ```
 
-Open:
-
-```text
-http://localhost:3000
-```
-
-Build for production:
+Build di produzione:
 
 ```bash
 npm run build
 npm start
 ```
 
----
-
-## Deploy on Vercel
-
-### Option 1 — GitHub import
-
-1. Create a new GitHub repository.
-2. Push this project to the repository.
-3. Go to Vercel.
-4. Click **Add New → Project**.
-5. Import the GitHub repository.
-6. Keep the default Next.js settings.
-7. Click **Deploy**.
-
-That is enough for the default version with no login.
-
-### Option 2 — Vercel CLI
-
-```bash
-npm i -g vercel
-vercel
-vercel --prod
-```
+> Tutto funziona **senza alcuna variabile d'ambiente**: l'app è local-first per default.
 
 ---
 
-## Add it to your iPad Home Screen
+## Deploy su Vercel
 
-1. Open the deployed Vercel URL in **Safari**.
-2. Tap **Share**.
-3. Tap **Add to Home Screen**.
-4. Launch QuizHub like a native study app.
+1. Push del repo su GitHub.
+2. Vercel → **Add New → Project** → importa il repo.
+3. Impostazioni Next.js di default → **Deploy**.
+
+Sufficiente per la versione senza login. Per login e sync, vedi sotto.
 
 ---
 
-## Optional Google login
+## Login Google e sync cloud (opzionali)
 
-Google login is available through **NextAuth / Auth.js**, but it is disabled by default.
+Copia `.env.example` in `.env.local` e compila solo ciò che ti serve.
 
-Create `.env.local` from `.env.example`:
-
-```bash
-cp .env.example .env.local
-```
-
-Then configure:
+### Login Google (Auth.js / NextAuth v5)
 
 ```env
 AUTH_ENABLED=true
-AUTH_SECRET=your-random-secret
-AUTH_GOOGLE_ID=your-google-client-id
-AUTH_GOOGLE_SECRET=your-google-client-secret
+AUTH_SECRET=genera-con-openssl-rand-base64-32
+AUTH_GOOGLE_ID=xxx.apps.googleusercontent.com
+AUTH_GOOGLE_SECRET=xxx
 ```
 
-Google OAuth callback URL:
+Callback OAuth: `https://<tuo-dominio>/api/auth/callback/google`.
+Con il login attivo, gli spazi possono essere legati al tuo account e si abilita il sync.
 
-```text
-https://YOUR-VERCEL-DOMAIN.vercel.app/api/auth/callback/google
-```
-
-Important note: if Google login is enabled, offline access is limited because authentication requires a network connection. For a pure offline study setup, keep:
+### Sync cloud (zero-knowledge)
 
 ```env
-AUTH_ENABLED=false
+KV_REST_API_URL=https://<...>.upstash.io
+KV_REST_API_TOKEN=xxx
 ```
 
----
-
-## Security notes
-
-QuizHub is designed for **HTML files you trust**.
-
-The quiz runner uses:
-
-```html
-<iframe srcdoc="..." sandbox="allow-scripts allow-same-origin allow-modals allow-popups allow-forms allow-downloads">
-```
-
-`allow-same-origin` is intentionally enabled so quiz files can persist their own `localStorage` data, such as attempts and scores.
-
-Recommended usage:
-
-- Upload only quiz HTML files you created or trust.
-- Do not use it as a public random-HTML hosting platform.
-- Do not commit `.env` files.
-- Keep `.env.example` only as a safe template.
+Usa **Vercel KV / Upstash Redis** via REST (nessuna dipendenza aggiuntiva). Ogni utente vede **solo** il proprio blob; per gli spazi vault il payload è già cifrato lato client. Se le variabili mancano, il sync resta disattivato e l'app continua a funzionare local-first.
 
 ---
 
-## Tech stack
+## Stack tecnico
 
-- **Next.js 14**
-- **React 18**
-- **Auth.js / NextAuth v5** for optional Google login
-- **IndexedDB** for local quiz storage
-- **Service Worker** for PWA caching
-- **Vercel** for deployment
-- No external UI component library
+- **Next.js 14** (App Router) · **React 18**
+- **NextAuth v5 (Auth.js)** — login Google opzionale
+- **IndexedDB** — archivio local-first (zero librerie)
+- **Web Crypto API** — AES-GCM + PBKDF2 (cifratura vault)
+- **Vercel KV / Upstash** — sync opzionale via REST
+- **PWA** — manifest + service worker
 
----
-
-## Project structure
+Struttura:
 
 ```text
-pss-quiz-hub/
-├─ app/
-│  ├─ layout.jsx
-│  ├─ globals.css
-│  ├─ page.jsx
-│  ├─ login/page.jsx
-│  ├─ run/[id]/page.jsx
-│  └─ api/auth/[...nextauth]/route.js
-├─ components/
-│  └─ SWRegister.jsx
-├─ lib/
-│  └─ db.js
-├─ public/
-│  ├─ manifest.webmanifest
-│  ├─ sw.js
-│  ├─ icon-192.png
-│  ├─ icon-512.png
-│  └─ apple-touch-icon.png
-├─ auth.js
-├─ auth.config.js
-├─ middleware.js
-├─ next.config.mjs
-├─ package.json
-└─ README.md
+app/
+  page.jsx            desktop: dock spazi, libreria, palette, vault
+  run/[id]/page.jsx   runner a tab con sandbox sicura + timer
+  login/page.jsx      accesso Google
+  api/auth/...        NextAuth
+  api/sync/route.js   sync cloud opzionale (zero-knowledge)
+lib/
+  db.js               IndexedDB multi-spazio + cifratura trasparente
+  crypto.js           Web Crypto (AES-GCM, PBKDF2)
+  sandbox.js          bridge sicuro srcdoc + shim storage
+  sync.js             client di sincronizzazione
+next.config.mjs       CSP + header di sicurezza
 ```
+
+---
+
+## Licenza
+
+MIT — vedi [LICENSE](LICENSE).
