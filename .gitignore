@@ -1,0 +1,65 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# production
+.vercel/
+
+# local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# keep example env files
+!.env.example
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# TypeScript / lint cache
+*.tsbuildinfo
+.eslintcache
+
+# misc cache
+.cache/
+.turbo/
+
+# testing / coverage
+coverage/
+playwright-report/
+test-results/
+
+# generated archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# local database / temp files
+*.sqlite
+*.sqlite3
+tmp/
+temp/
