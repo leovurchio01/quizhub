@@ -1,0 +1,176 @@
+/* ============================================================
+   PSS Quiz Hub — sistema di design
+   Font nativi Apple: New York (display), SF (body), SF Mono (dati)
+   ============================================================ */
+:root{
+  --paper:#f5f4ef;        /* carta calda, leggermente grigia */
+  --card:#ffffff;
+  --ink:#171b24;
+  --muted:#6b7385;
+  --faint:#9aa1b1;
+  --line:#e6e4db;
+  --line2:#efeee7;
+  --brand:#3a5bd9;        /* continuità con i quiz */
+  --brand-ink:#2c48b8;
+  --brand-soft:#eaf0ff;
+  --gold:#c0891f;         /* preferiti */
+  --gold-soft:#faf1db;
+  --ok:#1f9d6b;
+  --bad:#d64545;
+  --bad-soft:#fbeaea;
+  --shadow:0 1px 2px rgba(23,27,36,.05), 0 8px 24px rgba(23,27,36,.06);
+  --shadow-lift:0 2px 6px rgba(23,27,36,.08), 0 16px 40px rgba(23,27,36,.12);
+  --radius:16px;
+  --font-display:ui-serif,"New York",Georgia,Cambria,"Times New Roman",serif;
+  --font-body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--font-body);
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  padding-top:env(safe-area-inset-top);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+
+/* ---------- layout ---------- */
+.shell{max-width:1080px;margin:0 auto;padding:22px 20px 96px}
+@media(max-width:520px){.shell{padding:16px 14px 96px}}
+
+/* ---------- top bar ---------- */
+.masthead{display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:8px 0 20px;border-bottom:1px solid var(--line);margin-bottom:22px;flex-wrap:wrap}
+.wordmark{display:flex;align-items:baseline;gap:12px;min-width:0}
+.wordmark .glyph{font-family:var(--font-display);font-weight:600;font-size:1.9rem;letter-spacing:-.01em;line-height:1}
+.wordmark .glyph em{font-style:italic;color:var(--brand)}
+.wordmark .tag{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--faint);border:1px solid var(--line);border-radius:99px;padding:3px 9px;white-space:nowrap}
+@media(max-width:520px){.wordmark .tag{display:none}}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;
+  border-radius:11px;padding:11px 16px;font-weight:600;font-size:.92rem;cursor:pointer;transition:.15s;
+  -webkit-tap-highlight-color:transparent}
+.btn.primary{background:var(--brand);color:#fff;box-shadow:var(--shadow)}
+.btn.primary:hover{background:var(--brand-ink)}
+.btn.ghost{background:transparent;color:var(--muted);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--brand);color:var(--brand)}
+.btn.subtle{background:var(--card);color:var(--ink);border-color:var(--line)}
+.btn.subtle:hover{border-color:var(--muted)}
+.btn.danger{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.btn.danger:hover{background:#f6d9d9}
+.btn.sm{padding:7px 11px;font-size:.85rem;border-radius:9px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:focus-visible,.iconbtn:focus-visible,.chip:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+/* ---------- controls row ---------- */
+.controls{display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+.search{flex:1;min-width:200px;position:relative}
+.search input{width:100%;padding:11px 14px 11px 38px;border:1px solid var(--line);border-radius:12px;
+  background:var(--card);font:inherit;font-size:.95rem;color:var(--ink)}
+.search input::placeholder{color:var(--faint)}
+.search .mag{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:1rem}
+.search input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+
+.chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border:1px solid var(--line);
+  border-radius:99px;background:var(--card);color:var(--muted);font-size:.85rem;font-weight:600;cursor:pointer;
+  transition:.14s;-webkit-tap-highlight-color:transparent}
+.chip:hover{border-color:var(--muted)}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.chip .dot{width:9px;height:9px;border-radius:99px;flex:0 0 9px}
+.chip .n{font-family:var(--font-mono);font-size:.72rem;opacity:.7}
+.chip.star.on{background:var(--gold);border-color:var(--gold)}
+
+/* ---------- grid ---------- */
+.grid{display:grid;gap:16px;grid-template-columns:repeat(3,1fr)}
+@media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.grid{grid-template-columns:1fr}}
+
+/* ---------- quiz card (index card w/ colored spine) ---------- */
+.qcard{position:relative;display:flex;background:var(--card);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:.18s;
+  animation:rise .4s ease both}
+@media(hover:hover){.qcard:hover{transform:translateY(-3px);box-shadow:var(--shadow-lift)}}
+.qcard .spine{width:8px;flex:0 0 8px;background:var(--brand)}
+.qcard .body{flex:1;min-width:0;padding:15px 15px 13px 16px;display:flex;flex-direction:column;gap:9px}
+.qtop{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.qtitle{font-family:var(--font-display);font-size:1.16rem;font-weight:600;letter-spacing:-.01em;
+  line-height:1.22;word-break:break-word}
+.qcat{font-family:var(--font-mono);font-size:.68rem;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--muted);display:inline-flex;align-items:center;gap:6px;margin-top:2px}
+.qcat .dot{width:8px;height:8px;border-radius:99px}
+.qnote{font-size:.86rem;color:var(--muted);font-style:italic;
+  background:linear-gradient(var(--line2) 1px,transparent 1px);background-size:100% 1.5em;
+  line-height:1.5em;padding:2px 0;white-space:pre-wrap;word-break:break-word}
+.qmeta{display:flex;align-items:center;gap:12px;font-family:var(--font-mono);font-size:.7rem;color:var(--faint)}
+.qactions{display:flex;align-items:center;gap:8px;margin-top:2px}
+.qactions .open{flex:1}
+.iconbtn{width:34px;height:34px;flex:0 0 34px;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--muted);cursor:pointer;
+  font-size:1rem;transition:.14s;-webkit-tap-highlight-color:transparent}
+.iconbtn:hover{border-color:var(--muted);color:var(--ink)}
+.iconbtn.star.on{color:var(--gold);border-color:var(--gold);background:var(--gold-soft)}
+.corner{position:absolute;top:0;right:0;width:0;height:0;border-style:solid;
+  border-width:0 22px 22px 0;border-color:transparent var(--gold) transparent transparent;opacity:0;transition:.15s}
+.qcard.fav .corner{opacity:1}
+
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.qcard{animation:none}*{transition:none!important}}
+
+/* ---------- dropzone / empty ---------- */
+.dropzone{border:1.5px dashed var(--line);border-radius:var(--radius);background:transparent;
+  transition:.15s}
+.dropzone.drag{border-color:var(--brand);background:var(--brand-soft)}
+.empty{text-align:center;padding:56px 24px}
+.empty .big{font-family:var(--font-display);font-size:1.5rem;font-weight:600;margin:0 0 8px}
+.empty p{color:var(--muted);margin:0 auto 18px;max-width:420px}
+.empty .filecard{width:74px;height:92px;margin:0 auto 20px;border:1px solid var(--line);border-radius:10px;
+  background:var(--card);position:relative;box-shadow:var(--shadow)}
+.empty .filecard::before{content:"";position:absolute;left:0;top:0;width:8px;height:100%;background:var(--brand);border-radius:10px 0 0 10px}
+.empty .filecard::after{content:"";position:absolute;right:10px;top:0;width:20px;height:20px;
+  background:linear-gradient(225deg,var(--line) 50%,transparent 50%);border-radius:0 10px 0 0}
+
+/* ---------- sheet (edit dialog) ---------- */
+.scrim{position:fixed;inset:0;background:rgba(20,24,34,.34);backdrop-filter:blur(2px);
+  display:flex;align-items:flex-end;justify-content:center;z-index:50;animation:fade .2s ease}
+@media(min-width:640px){.scrim{align-items:center}}
+.sheet{width:100%;max-width:520px;background:var(--card);border-radius:20px 20px 0 0;
+  padding:20px 20px calc(20px + env(safe-area-inset-bottom));box-shadow:var(--shadow-lift);animation:slideup .24s ease}
+@media(min-width:640px){.sheet{border-radius:20px}}
+.sheet h3{font-family:var(--font-display);font-size:1.3rem;font-weight:600;margin:0 0 16px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.04em;margin-bottom:6px}
+.field input,.field textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:11px;
+  font:inherit;font-size:.95rem;color:var(--ink);background:var(--paper)}
+.field textarea{min-height:80px;resize:vertical;font-style:italic}
+.field input:focus,.field textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft);background:var(--card)}
+.sheet .row{display:flex;gap:10px;margin-top:8px}
+.sheet .row .btn{flex:1}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes slideup{from{transform:translateY(16px);opacity:.6}to{transform:none;opacity:1}}
+
+/* ---------- runner ---------- */
+.runbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:12px;
+  padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));
+  background:rgba(245,244,239,.9);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.runbar .rtitle{flex:1;min-width:0;font-family:var(--font-display);font-size:1.05rem;font-weight:600;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.runframe{width:100%;border:0;display:block;background:#fff;
+  height:calc(100vh - 56px - env(safe-area-inset-top))}
+
+/* ---------- misc ---------- */
+.count{font-family:var(--font-mono);font-size:.74rem;color:var(--faint)}
+.hint{font-size:.82rem;color:var(--faint);margin-top:10px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  background:var(--ink);color:#fff;padding:10px 16px;border-radius:99px;font-size:.85rem;font-weight:600;
+  box-shadow:var(--shadow-lift);z-index:60;animation:fade .2s ease}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
