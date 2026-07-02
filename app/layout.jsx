@@ -45,8 +45,11 @@ export const viewport = {
   viewportFit: "cover",
 };
 
-// Applica il tema salvato prima del paint (niente flash).
-const themeInit = `(function(){try{var t=localStorage.getItem('qh-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();`;
+// Applica tema/font/sfondo salvati prima del paint (niente flash).
+const themeInit = `(function(){try{var d=document.documentElement;
+var t=localStorage.getItem('qh-theme');if(t&&t!=='midnight')d.setAttribute('data-theme',t);
+var f=localStorage.getItem('qh-font');if(f&&f!=='system')d.setAttribute('data-font',f);
+var b=localStorage.getItem('qh-bg');if(b&&b!=='grid')d.setAttribute('data-bg',b);}catch(e){}})();`;
 
 export default function RootLayout({ children }) {
   return (

@@ -82,7 +82,9 @@ export default function Desktop() {
   const [editing, setEditing] = useState(null);
   const [drag, setDrag] = useState(false);
   const [toast, setToast] = useState("");
-  const [theme, setTheme] = useState("dark");
+  const [look, setLook] = useState({ theme: "midnight", font: "system", bg: "grid" });
+  const [showAppearance, setShowAppearance] = useState(false);
+  const [showExplore, setShowExplore] = useState(false);
   const [clock, setClock] = useState("");
   const [session, setSession] = useState(undefined);
   const [showSpaceDlg, setShowSpaceDlg] = useState(false);
@@ -91,6 +93,7 @@ export default function Desktop() {
   const [palette, setPalette] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [storage, setStorage] = useState(null);
+  const [showProtect, setShowProtect] = useState(false);
   const [trash, setTrash] = useState(0);
   const [showTrash, setShowTrash] = useState(false);
   const [trashList, setTrashList] = useState([]);
@@ -108,8 +111,14 @@ export default function Desktop() {
       setSpaces(s);
       const saved = await getMeta("activeSpaceId", LOCAL_SPACE_ID);
       setActiveId(s.some((x) => x.id === saved) ? saved : s[0].id);
-      const t = typeof localStorage !== "undefined" ? localStorage.getItem("qh-theme") : null;
-      setTheme(t === "light" ? "light" : "dark");
+      try {
+        setLook({
+          theme: localStorage.getItem("qh-theme") || "midnight",
+          font: localStorage.getItem("qh-font") || "system",
+          bg: localStorage.getItem("qh-bg") || "grid",
+        });
+        if (!localStorage.getItem("qh-onboarded")) setShowExplore(true);
+      } catch {}
       // Chiede al browser di rendere lo storage persistente (anti-sfratto).
       await requestPersistence().catch(() => {});
       setStorage(await storageInfo().catch(() => null));
@@ -142,13 +151,22 @@ export default function Desktop() {
     else { setQuizzes([]); setStats(null); setFolderPaths([]); }
   }, [activeId, spaces, locked, refresh]);
 
-  /* ---- tema ---- */
-  function toggleTheme() {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    try { localStorage.setItem("qh-theme", next); } catch {}
-    if (next === "light") document.documentElement.setAttribute("data-theme", "light");
-    else document.documentElement.removeAttribute("data-theme");
+  /* ---- personalizzazione (template) ---- */
+  function applyLook(next) {
+    setLook(next);
+    const d = document.documentElement;
+    next.theme && next.theme !== "midnight" ? d.setAttribute("data-theme", next.theme) : d.removeAttribute("data-theme");
+    next.font && next.font !== "system" ? d.setAttribute("data-font", next.font) : d.removeAttribute("data-font");
+    next.bg && next.bg !== "grid" ? d.setAttribute("data-bg", next.bg) : d.removeAttribute("data-bg");
+    try {
+      localStorage.setItem("qh-theme", next.theme);
+      localStorage.setItem("qh-font", next.font);
+      localStorage.setItem("qh-bg", next.bg);
+    } catch {}
+  }
+  function dismissExplore() {
+    setShowExplore(false);
+    try { localStorage.setItem("qh-onboarded", "1"); } catch {}
   }
 
   /* ---- upload nella cartella selezionata ---- */
@@ -160,6 +178,7 @@ export default function Desktop() {
     for (const f of files) await addQuizFromFile(f, activeId, pre);
     await refresh();
     flash(files.length === 1 ? "Quiz caricato" : files.length + " quiz caricati");
+    if (storage && !storage.persisted) tryPersist(); // ritenta in silenzio dopo l'uso
   }
 
   async function toggleFav(x) { await patchQuiz(x.id, { favorite: !x.favorite }); refresh(); }
@@ -194,12 +213,13 @@ export default function Desktop() {
     flash("Spazio aggiornato");
   }
 
-  /* ---- persistenza ---- */
-  async function askPersistence() {
-    const ok = await requestPersistence();
-    setStorage(await storageInfo());
-    flash(ok ? "Storage reso persistente 🔒" : "Il browser non ha concesso la persistenza");
-  }
+  /* ---- persistenza (silenziosa, senza allarmismi) ---- */
+  const tryPersist = useCallback(async (announce) => {
+    const ok = await requestPersistence().catch(() => false);
+    setStorage(await storageInfo().catch(() => null));
+    if (announce) flash(ok ? "Dati protetti 🔒" : "Scarica un backup per la massima sicurezza 💾");
+    return ok;
+  }, [flash]);
 
   /* ---- backup COMPLETO (tutti gli spazi) ---- */
   async function doFullExport() {
@@ -323,6 +343,13 @@ export default function Desktop() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Quando l'app viene installata (PWA), i browser concedono la persistenza: ritenta.
+  useEffect(() => {
+    const onInstalled = () => tryPersist(false);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => window.removeEventListener("appinstalled", onInstalled);
+  }, [tryPersist]);
+
   /* ---- derivati: albero cartelle + conteggi ---- */
   const allPaths = useMemo(() => {
     const set = new Set(folderPaths);
@@ -384,7 +411,8 @@ export default function Desktop() {
         <span className="spacer" />
         <span className="clock">{clock}</span>
         <button className="iconbtn" title="Cerca / comandi (⌘K)" onClick={() => setPalette(true)}>⌕</button>
-        <button className="iconbtn" title="Tema" onClick={toggleTheme}>{theme === "dark" ? "☾" : "☀"}</button>
+        <button className="iconbtn" title="Guida / esplora" onClick={() => setShowExplore(true)}>？</button>
+        <button className="iconbtn" title="Aspetto & temi" onClick={() => setShowAppearance(true)}>🎨</button>
         <button className="iconbtn" title="Sync cloud ↑" disabled={syncing} onClick={() => doSync("push")}>☁︎</button>
         {session?.user ? (
           <button className="iconbtn" title={`${session.user.email} — esci`} onClick={logout}
@@ -418,9 +446,9 @@ export default function Desktop() {
                 {activeSpace?.vault && <span className="pill">🔒 vault cifrato</span>}
                 {activeSpace?.owner && activeSpace.owner !== "local" && <span className="pill">{activeSpace.owner}</span>}
                 {storage && storage.supported && !storage.persisted && (
-                  <span className="pill" style={{ cursor: "pointer", color: "var(--gold)", borderColor: "var(--gold)" }}
-                    title="Il browser potrebbe cancellare i dati sotto pressione. Clicca per proteggerli." onClick={askPersistence}>
-                    ⚠︎ storage non protetto — attiva
+                  <span className="pill" style={{ cursor: "pointer" }}
+                    title="Come mettere al sicuro i tuoi dati" onClick={() => setShowProtect(true)}>
+                    🛡 proteggi i dati
                   </span>
                 )}
               </div>
@@ -585,7 +613,7 @@ export default function Desktop() {
       {unlockFor && <UnlockDialog space={unlockFor} onClose={() => setUnlockFor(null)} onUnlock={doUnlock} />}
       {showManage && activeSpace && (
         <ManageDialog space={activeSpace} storage={storage} trash={trash} onClose={() => setShowManage(false)}
-          onRenameSpace={renameSpace} onPersist={askPersistence}
+          onRenameSpace={renameSpace} onPersist={() => { setShowManage(false); setShowProtect(true); }}
           onExport={doExport} onImport={() => importRef.current?.click()}
           onFullExport={doFullExport}
           onSyncPush={() => doSync("push")} onSyncPull={() => doSync("pull")}
@@ -597,11 +625,24 @@ export default function Desktop() {
         <TrashDialog items={trashList} onClose={() => setShowTrash(false)}
           onRestore={doRestore} onPurge={doPurge} onEmpty={doEmptyTrash} />
       )}
+      {showAppearance && <AppearanceDialog look={look} onApply={applyLook} onClose={() => setShowAppearance(false)} />}
+      {showProtect && (
+        <DataProtectionDialog storage={storage}
+          onRetry={() => tryPersist(true)}
+          onBackup={() => { setShowProtect(false); doFullExport(); }}
+          onClose={() => setShowProtect(false)} />
+      )}
+      {showExplore && (
+        <ExploreDialog onClose={dismissExplore}
+          onUpload={() => { dismissExplore(); fileRef.current?.click(); }}
+          onNewSpace={() => { dismissExplore(); setShowSpaceDlg(true); }}
+          onAppearance={() => { dismissExplore(); setShowAppearance(true); }} />
+      )}
       {palette && (
         <Palette quizzes={quizzes || []} spaces={spaces} onClose={() => setPalette(false)}
           onOpenQuiz={(id) => { setPalette(false); router.push(`/run/${id}`); }}
           onSwitchSpace={(id) => { setPalette(false); setActiveId(id); }}
-          onCmd={(c) => { setPalette(false); if (c === "upload") fileRef.current?.click(); else if (c === "theme") toggleTheme(); else if (c === "newspace") setShowSpaceDlg(true); else if (c === "export") doExport(); else if (c === "newfolder") newFolder(""); }} />
+          onCmd={(c) => { setPalette(false); if (c === "upload") fileRef.current?.click(); else if (c === "appearance") setShowAppearance(true); else if (c === "guide") setShowExplore(true); else if (c === "newspace") setShowSpaceDlg(true); else if (c === "export") doExport(); else if (c === "newfolder") newFolder(""); }} />
       )}
       {toast && <div className="toast">{toast}</div>}
     </div>
@@ -746,10 +787,10 @@ function ManageDialog({ space, storage, trash, onClose, onRenameSpace, onPersist
         <p className="lead" style={{ margin: "6px 0 10px" }}>
           {storage?.persisted
             ? "✅ Storage persistente: il browser non cancellerà i tuoi dati."
-            : "⚠︎ Storage non protetto: attivalo per evitare che il browser lo cancelli."}
+            : "I dati sono salvati in questo browser. Per la massima sicurezza tieni un backup: scopri come."}
           {storage?.quota ? ` · ${fmtSize(storage.usage)} usati (${pct}%).` : ""}
         </p>
-        {!storage?.persisted && <div className="row"><button className="btn ghost" onClick={onPersist}>🔒 Proteggi lo storage</button></div>}
+        {!storage?.persisted && <div className="row"><button className="btn ghost" onClick={onPersist}>🛡 Proteggi i dati</button></div>}
 
         <label style={{ fontSize: ".72rem", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".05em" }}>Backup & ripristino</label>
         <div className="row" style={{ marginTop: 8 }}><button className="btn ghost" onClick={onExport}>⤓ Esporta questo spazio</button><button className="btn ghost" onClick={onImport}>⤒ Importa / Ripristina</button></div>
@@ -800,6 +841,177 @@ function TrashDialog({ items, onClose, onRestore, onPurge, onEmpty }) {
   );
 }
 
+function DataProtectionDialog({ storage, onRetry, onBackup, onClose }) {
+  const standalone = typeof window !== "undefined" &&
+    ((window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true);
+  const persisted = !!storage?.persisted;
+  const pct = storage?.quota ? Math.min(100, Math.round((storage.usage / storage.quota) * 100)) : 0;
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" style={{ maxHeight: "88vh", overflow: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <h3>🛡 Protezione dei dati</h3>
+        <p className="lead" style={{ marginBottom: 14 }}>
+          {persisted
+            ? "✅ Ottimo: il browser ha reso lo storage persistente. I tuoi quiz sono protetti dalla cancellazione automatica."
+            : "I tuoi quiz sono salvati in questo browser. Di norma restano lì, ma alcuni browser possono cancellarli se lo spazio è pieno. Ecco come metterti al sicuro al 100%."}
+          {storage?.quota ? ` · ${fmtSize(storage.usage)} usati (${pct}%).` : ""}
+        </p>
+
+        {!persisted && (
+          <>
+            <div className="feature" style={{ marginBottom: 10 }}>
+              <div className="fx">💾</div>
+              <div><div className="ft">Scarica un backup (garanzia sicura)</div>
+                <div className="fd">Un file con tutti i tuoi spazi e progressi. È la protezione più forte: se cambi PC o pulisci il browser, lo reimporti e torni com'eri. I vault restano cifrati anche nel file.</div></div>
+            </div>
+            <div className="feature" style={{ marginBottom: 10 }}>
+              <div className="fx">📲</div>
+              <div><div className="ft">Aggiungi alla Home / ai preferiti</div>
+                <div className="fd">{standalone
+                  ? "L'app è installata: molti browser ora proteggono lo storage automaticamente. Prova “Riprova a proteggere”."
+                  : "Installa QuizHub (Condividi → Aggiungi a Home su iPad, o l'icona “installa” su desktop): così la maggior parte dei browser concede la persistenza da sola."}</div></div>
+            </div>
+          </>
+        )}
+
+        <div className="row" style={{ marginTop: 4 }}>
+          <button className="btn primary" onClick={onBackup}>💾 Scarica backup completo</button>
+        </div>
+        {!persisted && (
+          <div className="row"><button className="btn ghost" onClick={onRetry}>🔄 Riprova a proteggere lo storage</button></div>
+        )}
+        <div className="row"><button className="btn subtle" onClick={onClose}>Chiudi</button></div>
+
+        <p className="hint" style={{ marginTop: 6 }}>
+          Nota: la persistenza dipende dal browser e non è sempre concedibile (specie su iPad/Safari). Il backup funziona ovunque.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+const THEMES = [
+  { id: "midnight", name: "Midnight", sw: ["#5b8cff", "#7c5cff", "#0b1120"] },
+  { id: "light", name: "Carta", sw: ["#3a5bd9", "#8b5cf6", "#eef1f8"] },
+  { id: "aurora", name: "Aurora", sw: ["#21e6c1", "#37b6ff", "#04120f"] },
+  { id: "sunset", name: "Sunset", sw: ["#ff7a59", "#ff4d8d", "#160810"] },
+  { id: "grape", name: "Grape", sw: ["#a06bff", "#ff5db8", "#0c0518"] },
+  { id: "terminal", name: "Terminal", sw: ["#34e39a", "#21e6c1", "#030805"] },
+];
+const FONTS = [
+  { id: "system", name: "Sistema" },
+  { id: "serif", name: "Serif" },
+  { id: "rounded", name: "Rounded" },
+  { id: "mono", name: "Mono" },
+];
+const BGS = [
+  { id: "grid", name: "Griglia" },
+  { id: "dots", name: "Punti" },
+  { id: "glow", name: "Glow" },
+  { id: "plain", name: "Pulito" },
+];
+
+function AppearanceDialog({ look, onApply, onClose }) {
+  const set = (part, val) => onApply({ ...look, [part]: val });
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" style={{ maxHeight: "88vh", overflow: "auto", maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+        <h3>🎨 Aspetto</h3>
+        <p className="lead">Personalizza QuizHub: scegli un template, il carattere e lo sfondo. Le modifiche sono immediate e restano salvate su questo dispositivo.</p>
+
+        <div className="app-section">
+          <label>Template tema</label>
+          <div className="theme-grid">
+            {THEMES.map((t) => (
+              <div key={t.id} className={"theme-card" + (look.theme === t.id ? " on" : "")} onClick={() => set("theme", t.id)}>
+                <div className="swatch-preview" style={{ background: `linear-gradient(135deg, ${t.sw[2]}, ${t.sw[2]})` }}>
+                  <i style={{ background: t.sw[0] }} /><i style={{ background: t.sw[1] }} /><i style={{ background: t.sw[2], border: "1px solid rgba(255,255,255,.2)" }} />
+                </div>
+                <div className="tname">{t.name}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="app-section">
+          <label>Carattere</label>
+          <div className="opt-row">
+            {FONTS.map((f) => (
+              <button key={f.id} className={"opt" + (look.font === f.id ? " on" : "")} onClick={() => set("font", f.id)}
+                style={{ fontFamily: f.id === "serif" ? "ui-serif,Georgia,serif" : f.id === "mono" ? "var(--font-mono)" : f.id === "rounded" ? "ui-rounded,Nunito,system-ui" : "inherit" }}>
+                {f.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="app-section">
+          <label>Sfondo</label>
+          <div className="opt-row">
+            {BGS.map((b) => (
+              <button key={b.id} className={"opt" + (look.bg === b.id ? " on" : "")} onClick={() => set("bg", b.id)}>{b.name}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="row">
+          <button className="btn subtle" onClick={() => onApply({ theme: "midnight", font: "system", bg: "grid" })}>Ripristina default</button>
+          <button className="btn primary" onClick={onClose}>Fatto</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const EXPLORE_FEATURES = [
+  { fx: "◫", ft: "Spazi", fd: "Scrivanie separate e isolate. Crea, rinomina, ricolora dalla dock a sinistra." },
+  { fx: "📁", ft: "Cartelle annidate", fd: "Organizza in Materia/Capitolo. Trascina i quiz nelle cartelle." },
+  { fx: "＋", ft: "Carica HTML", fd: "Trascina o scegli i tuoi file .html: quiz, esami, slide, flashcard." },
+  { fx: "▶", ft: "Lettore sicuro", fd: "Ogni quiz gira isolato, in tab multiple, con zoom e schermo intero." },
+  { fx: "⏱", ft: "Timer d'esame", fd: "Simula l'esame: conto alla rovescia con avvisi giallo/rosso." },
+  { fx: "🔒", ft: "Vault cifrati", fd: "Proteggi uno spazio con una passphrase (cifratura AES-256 sul device)." },
+  { fx: "💾", ft: "Backup & Cestino", fd: "Backup completo, export/import e cestino per recuperare le eliminazioni." },
+  { fx: "⌘", ft: "Command palette", fd: "Premi ⌘K / Ctrl+K per saltare a qualsiasi quiz, spazio o comando." },
+];
+
+function ExploreDialog({ onClose, onUpload, onNewSpace, onAppearance }) {
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet explore" onClick={(e) => e.stopPropagation()} style={{ maxHeight: "90vh", overflow: "auto" }}>
+        <div className="xhero">
+          <div className="xlogo">QH</div>
+          <h2>Benvenuto in QuizHub OS</h2>
+          <p className="xsub">Il tuo computer nel browser per studiare: carica quiz ed esami HTML e aprili in sicurezza, organizzati come vuoi.</p>
+        </div>
+
+        <div className="feature-grid">
+          {EXPLORE_FEATURES.map((f) => (
+            <div className="feature" key={f.ft}>
+              <div className="fx">{f.fx}</div>
+              <div><div className="ft">{f.ft}</div><div className="fd">{f.fd}</div></div>
+            </div>
+          ))}
+        </div>
+
+        <div className="kbds">
+          <span className="k"><b>⌘K</b> comandi</span>
+          <span className="k"><b>▶</b> apri quiz</span>
+          <span className="k"><b>★</b> preferiti</span>
+          <span className="k"><b>🗑</b> cestino</span>
+          <span className="k"><b>🎨</b> temi</span>
+        </div>
+
+        <div className="xcta">
+          <button className="btn primary" onClick={onUpload}>＋ Carica il primo quiz</button>
+          <button className="btn ghost" onClick={onNewSpace}>◫ Crea uno spazio</button>
+          <button className="btn ghost" onClick={onAppearance}>🎨 Personalizza</button>
+          <button className="btn subtle" onClick={onClose}>Inizia</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Palette({ quizzes, spaces, onClose, onOpenQuiz, onSwitchSpace, onCmd }) {
   const [term, setTerm] = useState("");
   const [active, setActive] = useState(0);
@@ -810,7 +1022,8 @@ function Palette({ quizzes, spaces, onClose, onOpenQuiz, onSwitchSpace, onCmd })
       { type: "cmd", id: "newfolder", ic: "📁", label: "Nuova cartella", meta: "azione" },
       { type: "cmd", id: "newspace", ic: "◫", label: "Nuovo spazio", meta: "azione" },
       { type: "cmd", id: "export", ic: "⤓", label: "Esporta backup", meta: "azione" },
-      { type: "cmd", id: "theme", ic: "☾", label: "Cambia tema", meta: "azione" },
+      { type: "cmd", id: "appearance", ic: "🎨", label: "Aspetto & temi", meta: "azione" },
+      { type: "cmd", id: "guide", ic: "？", label: "Guida / esplora", meta: "azione" },
     ];
     const sp = spaces.map((s) => ({ type: "space", id: s.id, ic: "▢", label: s.name, subt: "spazio", meta: "vai" }));
     const qz = quizzes.map((x) => ({ type: "quiz", id: x.id, ic: "▶", label: x.name, subt: x.folder || "quiz", meta: "apri" }));
