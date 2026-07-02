@@ -3,7 +3,7 @@ import SWRegister from "@/components/SWRegister";
 import StudyProvider from "@/components/StudyProvider";
 
 const SITE_URL = "https://quizhub-psi.vercel.app";
-const APP_VERSION = "3.0.1";
+const APP_VERSION = "3.1.0";
 const DESCRIPTION =
   "A computer inside your browser for running quizzes, exams and presentations as self-contained HTML. Local-first, zero-knowledge, sandbox-isolated, installable PWA.";
 

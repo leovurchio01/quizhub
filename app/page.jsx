@@ -532,7 +532,7 @@ export default function Desktop() {
         <div className="brand">
           <span className="logo">QH</span>
           <span className="name">QuizHub<em> OS</em></span>
-          <span className="os-tag">v3.0.1 · local-first</span>
+          <span className="os-tag">v3.1 · local-first</span>
         </div>
         <span className="spacer" />
         <span className="clock">{clock}</span>
@@ -777,10 +777,11 @@ export default function Desktop() {
         <RecoveryDialog recovery={recovery} onRestore={doRecovery} onClose={() => setRecovery(null)} />
       )}
       {showExplore && (
-        <ExploreDialog onClose={dismissExplore}
+        <ExploreDialogV31 onClose={dismissExplore}
           onUpload={() => { dismissExplore(); fileRef.current?.click(); }}
           onNewSpace={() => { dismissExplore(); setShowSpaceDlg(true); }}
-          onAppearance={() => { dismissExplore(); setShowAppearance(true); }} />
+          onAppearance={() => { dismissExplore(); setShowAppearance(true); }}
+          onProtect={() => { dismissExplore(); setShowProtect(true); }} />
       )}
       {palette && (
         <Palette quizzes={quizzes || []} spaces={spaces} onClose={() => setPalette(false)}
@@ -1288,6 +1289,108 @@ function ExploreDialog({ onClose, onUpload, onNewSpace, onAppearance }) {
           <button className="btn ghost" onClick={onNewSpace}><Plus /> Crea uno spazio</button>
           <button className="btn ghost" onClick={onAppearance}><PaletteIcon /> Personalizza</button>
           <button className="btn subtle" onClick={onClose}>Inizia</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const ONBOARD_STEPS_V31 = [
+  {
+    icon: Upload,
+    k: "Importa",
+    title: "Porta i tuoi HTML in una libreria locale",
+    body: "Quiz, esami, presentazioni e flashcard restano sul dispositivo, pronti anche offline.",
+    bullets: ["Upload multiplo", "Drag and drop", "Backup esportabile"],
+  },
+  {
+    icon: FolderOpen,
+    k: "Organizza",
+    title: "Dividi studio, materie e sessioni",
+    body: "Spazi separati, cartelle annidate, preferiti e ricerca tengono ordinato anche un archivio grande.",
+    bullets: ["Spazi isolati", "Cartelle gerarchiche", "Preferiti rapidi"],
+  },
+  {
+    icon: Timer,
+    k: "Studia",
+    title: "Apri i quiz in un runner sicuro",
+    body: "Il lettore usa sandbox, tab multiple, zoom, timer d'esame e metodo di studio globale.",
+    bullets: ["Runner isolato", "Timer e Focus", "Statistiche settimanali"],
+  },
+  {
+    icon: ShieldCheck,
+    k: "Proteggi",
+    title: "Aggiungi livelli di sicurezza reali",
+    body: "Guardian, backup completo, vault cifrati e sync opzionale riducono il rischio di perdere dati.",
+    bullets: ["Replica locale", "Cartella backup", "Vault AES-256"],
+  },
+];
+
+function ExploreDialogV31({ onClose, onUpload, onNewSpace, onAppearance, onProtect }) {
+  const [step, setStep] = useState(0);
+  const active = ONBOARD_STEPS_V31[step];
+  const Icon = active.icon;
+  const next = () => setStep((s) => Math.min(ONBOARD_STEPS_V31.length - 1, s + 1));
+  const prev = () => setStep((s) => Math.max(0, s - 1));
+
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet explore onboard" onClick={(e) => e.stopPropagation()}>
+        <div className="xhero">
+          <div className="xlogo">QH</div>
+          <span className="step-badge">QuizHub OS 3.1</span>
+          <h2>Setup rapido per studiare meglio</h2>
+          <p className="xsub">Una libreria locale, sicura e pronta per sessioni di studio reali.</p>
+        </div>
+
+        <div className="onboard-grid">
+          <div className="onboard-rail" aria-label="Percorso onboarding">
+            {ONBOARD_STEPS_V31.map((s, idx) => {
+              const StepIcon = s.icon;
+              return (
+                <button key={s.k} className={"onboard-step" + (idx === step ? " on" : "")} onClick={() => setStep(idx)}>
+                  <span><StepIcon /></span>
+                  <b>{s.k}</b>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="onboard-panel">
+            <div className="onboard-heroicon"><Icon /></div>
+            <p className="step-badge">{step + 1} / {ONBOARD_STEPS_V31.length}</p>
+            <h3>{active.title}</h3>
+            <p className="lead">{active.body}</p>
+            <div className="step-points">
+              {active.bullets.map((b) => <span key={b}>{b}</span>)}
+            </div>
+          </div>
+        </div>
+
+        <div className="xcta">
+          <button className="btn primary" onClick={onUpload}><Upload /> Carica HTML</button>
+          <button className="btn ghost" onClick={onNewSpace}><Plus /> Nuovo spazio</button>
+          <button className="btn ghost" onClick={onProtect}><ShieldCheck /> Proteggi</button>
+          <button className="btn ghost" onClick={onAppearance}><PaletteIcon /> Aspetto</button>
+        </div>
+
+        <div className="onboard-nav">
+          <button className="btn subtle sm" onClick={prev} disabled={step === 0}>Indietro</button>
+          <div className="progress-dots" aria-hidden>
+            {ONBOARD_STEPS_V31.map((s, idx) => <i key={s.k} className={idx === step ? "on" : ""} />)}
+          </div>
+          {step < ONBOARD_STEPS_V31.length - 1 ? (
+            <button className="btn subtle sm" onClick={next}>Avanti</button>
+          ) : (
+            <button className="btn subtle sm" onClick={onClose}>Inizia</button>
+          )}
+        </div>
+
+        <div className="kbds">
+          <span className="k"><b>Ctrl K</b> comandi</span>
+          <span className="k"><b>Star</b> preferiti</span>
+          <span className="k"><b>Focus</b> studio</span>
+          <span className="k"><b>Guardian</b> backup</span>
         </div>
       </div>
     </div>

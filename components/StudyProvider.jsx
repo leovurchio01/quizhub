@@ -11,6 +11,7 @@ import { usePathname } from "next/navigation";
 import {
   MODES, STRICTNESS, PHASE_LABEL,
   loadStudy, saveStudy, defaultState, fmtClock, fmtDuration, todayKey,
+  rollStatsToToday, recordStudySecond, recordStudySession,
 } from "@/lib/study";
 
 function beep(on) {
@@ -26,10 +27,6 @@ function beep(on) {
     g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
     o.start(); o.stop(ctx.currentTime + 0.52);
   } catch {}
-}
-function yesterdayKey() {
-  const d = new Date(); d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
 }
 const BREAK = new Set(["short", "long"]);
 const COUNTDOWN = new Set(["study", "short", "long"]);
@@ -78,17 +75,15 @@ export default function StudyProvider() {
       let n = { ...s, stats: { ...s.stats } };
       let changed = false;
 
-      if (n.stats.date !== todayKey()) {
-        n.stats.date = todayKey(); n.stats.todaySeconds = 0; n.stats.sessions = 0; changed = true;
-      }
+      if (n.stats.date !== todayKey()) { n.stats = rollStatsToToday(n.stats); changed = true; }
       const studying = n.phase === "study" || n.phase === "chrono";
       if (studying) {
         if (n.stats.todaySeconds === 0) {
           // primo secondo di studio oggi: aggiorna lo streak
-          n.stats.streak = n.stats.lastActiveDate === yesterdayKey() ? (n.stats.streak || 0) + 1 : 1;
+          n.stats.streak = n.stats.lastActiveDate === todayKey(-1) ? (n.stats.streak || 0) + 1 : 1;
           n.stats.lastActiveDate = todayKey();
         }
-        n.stats.todaySeconds += 1; changed = true;
+        n.stats = recordStudySecond(n.stats); changed = true;
       }
       if (COUNTDOWN.has(n.phase) && n.endsAt && t >= n.endsAt) {
         n = advance(n); beep(n.prefs.sound); changed = true;
@@ -103,9 +98,7 @@ export default function StudyProvider() {
     const p = n.prefs;
     if (n.phase === "study") {
       const cycle = n.cycle + 1;
-      const sessions = (n.stats.sessions || 0) + 1;
-      const totalSessions = (n.stats.totalSessions || 0) + 1;
-      const stats = { ...n.stats, sessions, totalSessions };
+      const stats = recordStudySession(n.stats);
       if (n.mode === "exam") return { ...n, phase: "done", running: false, endsAt: null, remaining: null, cycle, stats };
       const isLong = cycle % (p.cycles || 4) === 0;
       const mins = isLong ? p.long : p.short;

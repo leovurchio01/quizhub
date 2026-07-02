@@ -8,7 +8,7 @@
 // ============================================================
 import { useEffect, useMemo, useState } from "react";
 import { BarChart3, ClipboardCheck, Clock3, Play, Repeat2, Star, Target, Timer, Upload } from "lucide-react";
-import { loadStudy, fmtDuration } from "@/lib/study";
+import { loadStudy, fmtDuration, studySummary } from "@/lib/study";
 
 function studyCmd(detail) {
   try { window.dispatchEvent(new CustomEvent("qh:study", { detail })); } catch {}
@@ -46,6 +46,8 @@ export default function Dashboard({ spaceName, quizzes = [], stats, foldersCount
   );
   const resume = recents[0] || quizzes[0] || null;
   const favorites = useMemo(() => quizzes.filter((x) => x.favorite).slice(0, 6), [quizzes]);
+  const summary = useMemo(() => studySummary(study), [study]);
+  const maxDay = Math.max(1, ...summary.days.map((d) => d.seconds));
 
   return (
     <section className="dash" aria-label="Dashboard di studio">
@@ -83,10 +85,28 @@ export default function Dashboard({ spaceName, quizzes = [], stats, foldersCount
           <div className="cc-label"><BarChart3 /> Oggi</div>
           <div className="dash-stats">
             <div><span className="ds-v">{study ? fmtDuration(study.todaySeconds) : "0m"}</span><span className="ds-k">studio</span></div>
-            <div><span className="ds-v">{study?.sessions ?? 0}</span><span className="ds-k">sessioni</span></div>
+            <div><span className="ds-v">{fmtDuration(summary.weekSeconds)}</span><span className="ds-k">settimana</span></div>
             <div><span className="ds-v">{study?.streak ?? 0}</span><span className="ds-k">streak</span></div>
-            <div><span className="ds-v">{stats?.favorites ?? 0}</span><span className="ds-k">preferiti</span></div>
+            <div><span className="ds-v">{summary.focusScore}</span><span className="ds-k">focus score</span></div>
           </div>
+        </div>
+      </div>
+
+      <div className="glasscard study-analytics">
+        <div className="cc-label"><BarChart3 /> Settimana studio</div>
+        <div className="week-bars" aria-label="Minuti di studio negli ultimi 7 giorni">
+          {summary.days.map((d) => (
+            <div className="wday" key={d.key} title={`${d.label}: ${fmtDuration(d.seconds)}`}>
+              <span className="wbar"><i style={{ height: `${Math.max(4, (d.seconds / maxDay) * 100)}%` }} /></span>
+              <span className="wlabel">{d.label}</span>
+            </div>
+          ))}
+        </div>
+        <div className="study-insights">
+          <span><b>{summary.activeDays}/7</b><small>giorni attivi</small></span>
+          <span><b>{summary.weekSessions}</b><small>sessioni settimana</small></span>
+          <span><b>{fmtDuration(summary.avgSessionSeconds)}</b><small>media sessione</small></span>
+          <span><b>{fmtDuration(summary.bestDaySeconds)}</b><small>miglior giorno</small></span>
         </div>
       </div>
 
