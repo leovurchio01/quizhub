@@ -41,9 +41,17 @@ export default function StudyProvider() {
   const [open, setOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const stRef = useRef(null);
+  const cmdRef = useRef(null);
 
   useEffect(() => { setSt(loadStudy()); }, []);
   useEffect(() => { stRef.current = st; }, [st]);
+
+  // Comandi esterni (dalla Dashboard) via CustomEvent "qh:study".
+  useEffect(() => {
+    const h = (e) => cmdRef.current && cmdRef.current(e.detail || {});
+    window.addEventListener("qh:study", h);
+    return () => window.removeEventListener("qh:study", h);
+  }, []);
 
   const update = useCallback((patch) => {
     setSt((s) => {
@@ -159,6 +167,24 @@ export default function StudyProvider() {
     update({ mode, prefs, phase: "idle", running: false, endsAt: null, remaining: null, chronoBase: 0, chronoStart: null, cycle: 0 });
   }
   function setPref(k, v) { update((s) => ({ ...s, prefs: { ...s.prefs, [k]: v } })); }
+  function startSession(mode) {
+    const p = MODES[mode] || MODES.pomodoro;
+    update((s) => {
+      const prefs = mode === "custom" ? s.prefs : { ...s.prefs, study: p.study, short: p.short, long: p.long, cycles: p.cycles };
+      if (p.kind === "chrono") return { ...s, mode, prefs, phase: "chrono", running: true, chronoBase: 0, chronoStart: Date.now(), cycle: 0 };
+      const secs = (prefs.study || 25) * 60;
+      return { ...s, mode, prefs, phase: "study", running: true, endsAt: Date.now() + secs * 1000, remaining: secs, cycle: 0 };
+    });
+  }
+
+  // Handler dei comandi esterni (assegnato ad ogni render → sempre aggiornato).
+  cmdRef.current = (d) => {
+    if (!d || !stRef.current) return;
+    if (d.open) setOpen(true);
+    if (d.focus != null) update({ focus: !!d.focus });
+    if (d.mode && d.start) { startSession(d.mode); setOpen(true); }
+    else if (d.mode) { selectMode(d.mode); setOpen(true); }
+  };
 
   if (!st || pathname === "/login") return null;
 

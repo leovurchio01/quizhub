@@ -38,6 +38,7 @@ import {
 } from "@/lib/db";
 import { createVault, unlockVault } from "@/lib/crypto";
 import { pushSpace, pullSpace, SYNC_STATES } from "@/lib/sync";
+import Dashboard from "@/components/Dashboard";
 import {
   startGuardian,
   onGuardianChange,
@@ -546,7 +547,17 @@ export default function Desktop() {
             </div>
           ) : (
             <>
-              {stats && stats.count > 0 && (
+              {sel === "__all__" && !q.trim() && !favOnly && (
+                <Dashboard
+                  spaceName={activeSpace?.name || "Spazio"}
+                  quizzes={quizzes}
+                  stats={stats}
+                  foldersCount={allPaths.size}
+                  onOpen={(id) => router.push(`/run/${id}`)}
+                  onUpload={() => fileRef.current?.click()}
+                />
+              )}
+              {stats && stats.count > 0 && !(sel === "__all__" && !q.trim() && !favOnly) && (
                 <div className="stats">
                   <div className="stat"><div className="k">Quiz</div><div className="v">{stats.count}</div></div>
                   <div className="stat"><div className="k">Preferiti</div><div className="v">{stats.favorites}</div></div>

@@ -479,6 +479,48 @@ button { font-family: inherit; }
 .secpill.warn { color: var(--gold); border-color: var(--gold); }
 
 /* ============================================================
+   Dashboard di studio (home)
+   ============================================================ */
+.dash { margin-bottom: 22px; animation: rise 0.4s ease both; }
+.dash-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.dash-head h1 { font-family: var(--font-display); font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+.dash-head .sub { color: var(--muted); font-size: 0.9rem; margin: 4px 0 0; }
+.dash-head .sub b { color: var(--ink); }
+.glasscard { background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--radius);
+  padding: 16px; backdrop-filter: blur(14px); box-shadow: var(--shadow); }
+.dash-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; margin-bottom: 8px; }
+@media (max-width: 720px) { .dash-grid { grid-template-columns: 1fr; } }
+.cc-label { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); margin-bottom: 8px; }
+.cc-label.sec { margin: 20px 0 10px; }
+.continue { display: flex; flex-direction: column; gap: 6px; position: relative; overflow: hidden; }
+.continue::after { content: ""; position: absolute; right: -30px; top: -30px; width: 120px; height: 120px;
+  background: radial-gradient(circle, var(--brand), transparent 70%); opacity: 0.16; pointer-events: none; }
+.cc-title { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; line-height: 1.2; word-break: break-word; }
+.cc-meta { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); margin-bottom: 6px; }
+.continue .btn { align-self: flex-start; }
+.dash-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 8px; }
+.dash-stats > div { display: flex; flex-direction: column; }
+.dash-stats .ds-v { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; line-height: 1.1; }
+.dash-stats .ds-k { font-family: var(--font-mono); font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); }
+.suggest-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+@media (max-width: 720px) { .suggest-row { grid-template-columns: repeat(2, 1fr); } }
+.suggest { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; cursor: pointer; text-align: left;
+  transition: 0.15s; padding: 13px 14px; }
+.suggest:hover { transform: translateY(-3px); border-color: var(--stroke-strong); box-shadow: var(--glow); }
+.suggest .sg-ic { font-size: 1.4rem; }
+.suggest .sg-t { font-weight: 700; font-size: 0.92rem; }
+.suggest .sg-s { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); }
+.suggest.focus .sg-t { color: var(--accent); }
+.recents { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.rchip { flex: 0 0 auto; min-width: 150px; max-width: 220px; text-align: left; cursor: pointer;
+  background: var(--panel-2); border: 1px solid var(--stroke); border-radius: 12px; padding: 10px 12px; transition: 0.14s; }
+.rchip:hover { transform: translateY(-2px); border-color: var(--stroke-strong); }
+.rchip .rc-name { display: block; font-weight: 600; font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rchip .rc-folder { display: block; font-family: var(--font-mono); font-size: 0.64rem; color: var(--faint); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rchip.fav { border-color: color-mix(in srgb, var(--gold) 40%, var(--stroke)); }
+
+/* ============================================================
    Study Provider — widget timer globale
    ============================================================ */
 .study-widget { position: fixed; left: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 55; }
