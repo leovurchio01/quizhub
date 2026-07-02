@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Maximize2, Minus, Pause, Play, Plus, RefreshCw, Timer, X } from "lucide-react";
 import {
   getQuiz,
   getQuizHtml,
@@ -148,15 +149,15 @@ export default function Runner({ params }) {
           <i className="y" onClick={() => setZoom(1)} style={{ cursor: "pointer" }} title="Reset zoom" />
           <i className="g" onClick={fullscreen} style={{ cursor: "pointer" }} title="Schermo intero" />
         </div>
-        <button className="btn subtle sm" onClick={() => router.push("/")}>← Libreria</button>
+        <button className="btn subtle sm" onClick={() => router.push("/")}><ArrowLeft /> Libreria</button>
         <div className="tabs">
           {tabs.map((t) => (
             <div key={t.id} className={"tab" + (t.id === activeTab ? " on" : "")} onClick={() => setActiveTab(t.id)}>
               <span className="t">{t.name}</span>
-              <span className="x" onClick={(e) => closeTab(t.id, e)}>✕</span>
+              <span className="x" onClick={(e) => closeTab(t.id, e)}><X /></span>
             </div>
           ))}
-          <button className="iconbtn" title="Apri un altro quiz" onClick={() => setPicker((p) => !p)}>＋</button>
+          <button className="iconbtn" title="Apri un altro quiz" aria-label="Apri un altro quiz" onClick={() => setPicker((p) => !p)}><Plus /></button>
         </div>
         <div className="secinfo" aria-hidden>
           <span className="secpill" title="Il quiz gira in un iframe sandbox a origine opaca: non può toccare i tuoi dati.">🔐 isolato</span>
@@ -169,11 +170,11 @@ export default function Runner({ params }) {
           {integrity === false && <span className="secpill warn" title="L'HTML NON corrisponde più al fingerprint originale: file corrotto o modificato.">⚠ modificato</span>}
         </div>
         <div className="winbtns">
-          <button className="iconbtn" title="Zoom -" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)))}>－</button>
-          <button className="iconbtn" title="Zoom +" onClick={() => setZoom((z) => Math.min(2, +(z + 0.1).toFixed(2)))}>＋</button>
-          <button className="iconbtn" title="Ricarica" onClick={() => setReloadKey((k) => k + 1)}>↻</button>
-          <button className="iconbtn" title="Timer esame" onClick={setExam}>⏱</button>
-          <button className="iconbtn" title="Schermo intero" onClick={fullscreen}>⤢</button>
+          <button className="iconbtn" title="Zoom -" aria-label="Riduci zoom" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)))}><Minus /></button>
+          <button className="iconbtn" title="Zoom +" aria-label="Aumenta zoom" onClick={() => setZoom((z) => Math.min(2, +(z + 0.1).toFixed(2)))}><Plus /></button>
+          <button className="iconbtn" title="Ricarica" aria-label="Ricarica quiz" onClick={() => setReloadKey((k) => k + 1)}><RefreshCw /></button>
+          <button className="iconbtn" title="Timer esame" aria-label="Imposta timer esame" onClick={setExam}><Timer /></button>
+          <button className="iconbtn" title="Schermo intero" aria-label="Schermo intero" onClick={fullscreen}><Maximize2 /></button>
         </div>
       </div>
 
@@ -231,8 +232,8 @@ export default function Runner({ params }) {
       {examStr && (
         <div className="exam-hud">
           <span className={"time " + examClass}>{examStr}</span>
-          <button className="iconbtn" title={examRunning ? "Pausa" : "Riprendi"} onClick={() => setExamRunning((r) => !r)}>{examRunning ? "⏸" : "▶"}</button>
-          <button className="iconbtn" title="Azzera" onClick={() => { setExamLeft(null); setExamRunning(false); }}>✕</button>
+          <button className="iconbtn" title={examRunning ? "Pausa" : "Riprendi"} aria-label={examRunning ? "Pausa timer" : "Riprendi timer"} onClick={() => setExamRunning((r) => !r)}>{examRunning ? <Pause /> : <Play />}</button>
+          <button className="iconbtn" title="Azzera" aria-label="Azzera timer" onClick={() => { setExamLeft(null); setExamRunning(false); }}><X /></button>
         </div>
       )}
     </div>

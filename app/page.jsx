@@ -2,6 +2,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  ChevronRight,
+  CloudUpload,
+  Download,
+  Folder as FolderIcon,
+  FolderOpen,
+  HelpCircle,
+  Import as ImportIcon,
+  Lock,
+  LogIn,
+  MoreVertical,
+  Palette as PaletteIcon,
+  Play,
+  Plus,
+  Search,
+  Settings2,
+  ShieldCheck,
+  Star,
+  Timer,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import {
   LOCAL_SPACE_ID,
   listSpaces,
   createSpace,
@@ -466,17 +488,17 @@ export default function Desktop() {
         </div>
         <span className="spacer" />
         <span className="clock">{clock}</span>
-        <button className="iconbtn" title="Cerca / comandi (⌘K)" onClick={() => setPalette(true)}>⌕</button>
-        <button className="iconbtn" title="Guida / esplora" onClick={() => setShowExplore(true)}>？</button>
-        <button className="iconbtn" title="Aspetto & temi" onClick={() => setShowAppearance(true)}>🎨</button>
-        <button className="iconbtn" title="Sync cloud ↑" disabled={syncing} onClick={() => doSync("push")}>☁︎</button>
+        <button className="iconbtn" title="Cerca / comandi (⌘K)" aria-label="Cerca o apri i comandi" onClick={() => setPalette(true)}><Search /></button>
+        <button className="iconbtn" title="Guida / esplora" aria-label="Apri guida" onClick={() => setShowExplore(true)}><HelpCircle /></button>
+        <button className="iconbtn" title="Aspetto & temi" aria-label="Personalizza aspetto" onClick={() => setShowAppearance(true)}><PaletteIcon /></button>
+        <button className="iconbtn" title="Sync cloud ↑" aria-label="Carica nel cloud" disabled={syncing} onClick={() => doSync("push")}><CloudUpload /></button>
         {session?.user ? (
           <button className="iconbtn" title={`${session.user.email} — esci`} onClick={logout}
             style={{ background: spineColor(session.user.email), color: "#fff" }}>
             {initials(session.user.name || session.user.email)}
           </button>
         ) : LOGIN_CONFIGURED && session === null ? (
-          <button className="iconbtn" title="Accedi con Google" onClick={() => (window.location.href = "/login")}>⏻</button>
+          <button className="iconbtn" title="Accedi con Google" aria-label="Accedi con Google" onClick={() => (window.location.href = "/login")}><LogIn /></button>
         ) : null}
       </div>
 
@@ -490,7 +512,7 @@ export default function Desktop() {
               {s.vault && <span className="lock">{hasVaultKey(s.id) ? "🔓" : "🔒"}</span>}
             </button>
           ))}
-          <button className="add" title="Nuovo spazio" onClick={() => setShowSpaceDlg(true)}>＋</button>
+          <button className="add" title="Nuovo spazio" aria-label="Nuovo spazio" onClick={() => setShowSpaceDlg(true)}><Plus /></button>
         </div>
 
         <main className="main">
@@ -499,12 +521,12 @@ export default function Desktop() {
               <h1>{activeSpace?.name || "Spazio"}</h1>
               <div className="sub">
                 <span>{locked ? "Spazio cifrato — bloccato" : "Libreria quiz · esami · presentazioni"}</span>
-                {activeSpace?.vault && <span className="pill">🔒 vault cifrato</span>}
+                {activeSpace?.vault && <span className="pill"><Lock /> vault cifrato</span>}
                 {activeSpace?.owner && activeSpace.owner !== "local" && <span className="pill">{activeSpace.owner}</span>}
                 {storage && storage.supported && (
                   <span className="pill" style={{ cursor: "pointer" }}
                     title="Protezione dei dati: repliche automatiche multi-livello" onClick={() => setShowProtect(true)}>
-                    🛡 {guard?.folder?.connected && guard?.folder?.permission === "granted"
+                    <ShieldCheck /> {guard?.folder?.connected && guard?.folder?.permission === "granted"
                       ? "guardian attivo"
                       : storage.persisted ? "guardian" : "proteggi i dati"}
                   </span>
@@ -513,8 +535,8 @@ export default function Desktop() {
             </div>
             {!locked && (
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="btn subtle sm" onClick={() => setShowManage(true)}>⚙︎ Gestisci</button>
-                <button className="btn primary" onClick={() => fileRef.current?.click()}>＋ Carica quiz</button>
+                <button className="btn subtle sm" onClick={() => setShowManage(true)}><Settings2 /> Gestisci</button>
+                <button className="btn primary" onClick={() => fileRef.current?.click()}><Upload /> Carica quiz</button>
               </div>
             )}
           </div>
@@ -526,7 +548,7 @@ export default function Desktop() {
 
           {locked ? (
             <div className="empty">
-              <div className="orb">🔒</div>
+              <div className="orb"><Lock /></div>
               <p className="big">Spazio protetto</p>
               <p>Questo spazio è cifrato end-to-end sul dispositivo. Inserisci la passphrase per sbloccarlo.</p>
               <button className="btn primary" onClick={() => setUnlockFor(activeSpace)}>Sblocca vault</button>
@@ -538,10 +560,10 @@ export default function Desktop() {
               onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
               onDrop={(e) => { e.preventDefault(); setDrag(false); handleFiles(e.dataTransfer.files); }}>
               <div className="empty">
-                <div className="orb">🖥️</div>
+                <div className="orb"><Upload /></div>
                 <p className="big">La libreria è vuota</p>
                 <p>Carica gli HTML dei tuoi quiz, esami o presentazioni (es. <code>esame_fisica.html</code>). Restano su questo dispositivo e si aprono anche offline, in una finestra isolata e sicura.</p>
-                <button className="btn primary" onClick={() => fileRef.current?.click()}>＋ Carica il primo quiz</button>
+                <button className="btn primary" onClick={() => fileRef.current?.click()}><Upload /> Carica il primo quiz</button>
                 <p className="hint">…oppure trascina qui i file .html</p>
               </div>
             </div>
@@ -571,8 +593,8 @@ export default function Desktop() {
                 <aside className="folderpanel">
                   <div className="fp-head">
                     <h4>Cartelle</h4>
-                    <button className="iconbtn" style={{ width: 28, height: 28 }} title="Nuova cartella"
-                      onClick={() => newFolder(typeof sel === "string" && sel !== "__all__" && sel !== "__none__" ? sel : "")}>＋</button>
+                    <button className="iconbtn" style={{ width: 28, height: 28 }} title="Nuova cartella" aria-label="Nuova cartella"
+                      onClick={() => newFolder(typeof sel === "string" && sel !== "__all__" && sel !== "__none__" ? sel : "")}><Plus /></button>
                   </div>
                   <div className="tree">
                     <div className={"tnode" + (sel === "__all__" ? " on" : "") + (dropPath === "__all__" ? " drop" : "")}
@@ -580,7 +602,7 @@ export default function Desktop() {
                       onDragOver={(e) => { e.preventDefault(); setDropPath("__all__"); }}
                       onDragLeave={() => setDropPath((d) => (d === "__all__" ? null : d))}
                       onDrop={(e) => { const id = e.dataTransfer.getData("text/quizid"); if (id) dropQuizInto(id, "__none__"); }}>
-                      <span className="caret" /> <span className="fic">🗂</span>
+                      <span className="caret" /> <span className="fic"><FolderOpen /></span>
                       <span className="lbl">Tutti</span><span className="cnt">{quizzes.length}</span>
                     </div>
                     <FolderTree node={tree} depth={0} sel={sel} expanded={expanded} counts={counts} dropPath={dropPath}
@@ -592,7 +614,7 @@ export default function Desktop() {
                         onDragOver={(e) => { e.preventDefault(); setDropPath("__none__"); }}
                         onDragLeave={() => setDropPath((d) => (d === "__none__" ? null : d))}
                         onDrop={(e) => { const id = e.dataTransfer.getData("text/quizid"); if (id) dropQuizInto(id, "__none__"); }}>
-                        <span className="caret" /> <span className="fic">▨</span>
+                        <span className="caret" /> <span className="fic"><FolderIcon /></span>
                         <span className="lbl">Senza cartella</span><span className="cnt">{uncategorized}</span>
                       </div>
                     )}
@@ -603,14 +625,14 @@ export default function Desktop() {
                 <div>
                   <div className="controls">
                     <div className="search">
-                      <span className="mag">⌕</span>
+                      <span className="mag"><Search /></span>
                       <input type="search" placeholder="Cerca per nome, nota, cartella o tag…" value={q} onChange={(e) => setQ(e.target.value)} />
                     </div>
-                    <button className={"chip star" + (favOnly ? " on" : "")} onClick={() => setFavOnly((v) => !v)}>★ Preferiti</button>
-                    <button className="iconbtn" title="Esporta questo spazio" onClick={doExport}>⤓</button>
-                    <button className="iconbtn" title="Importa" onClick={() => importRef.current?.click()}>⤒</button>
+                    <button className={"chip star" + (favOnly ? " on" : "")} onClick={() => setFavOnly((v) => !v)}><Star fill={favOnly ? "currentColor" : "none"} /> Preferiti</button>
+                    <button className="iconbtn" title="Esporta questo spazio" aria-label="Esporta questo spazio" onClick={doExport}><Download /></button>
+                    <button className="iconbtn" title="Importa" aria-label="Importa backup" onClick={() => importRef.current?.click()}><ImportIcon /></button>
                     <button className="iconbtn" title={`Cestino (${trash})`} onClick={openTrash} style={trash ? { borderColor: "var(--gold)", color: "var(--gold)" } : undefined}>
-                      🗑{trash ? <span style={{ fontFamily: "var(--font-mono)", fontSize: ".62rem", marginLeft: 2 }}>{trash}</span> : null}
+                      <Trash2 />{trash ? <span style={{ fontFamily: "var(--font-mono)", fontSize: ".62rem", marginLeft: 2 }}>{trash}</span> : null}
                     </button>
                   </div>
 
@@ -629,7 +651,7 @@ export default function Desktop() {
                       <p>{sel === "__all__" ? "Nessun quiz corrisponde ai filtri." : "Questa cartella è vuota. Trascina qui un quiz o caricane uno nuovo."}</p>
                       <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                         <button className="btn subtle" onClick={() => { setQ(""); setSel("__all__"); setFavOnly(false); }}>Azzera filtri</button>
-                        <button className="btn primary" onClick={() => fileRef.current?.click()}>＋ Carica quiz</button>
+                        <button className="btn primary" onClick={() => fileRef.current?.click()}><Upload /> Carica quiz</button>
                       </div>
                     </div>
                   ) : (
@@ -649,7 +671,9 @@ export default function Desktop() {
                                   <div className="qtitle">{x.name}</div>
                                   <div className="qcat"><span className="dot" style={{ background: col }} />{x.folder || "senza cartella"}</div>
                                 </div>
-                                <button className={"iconbtn" + (x.favorite ? " on" : "")} title="Preferito" onClick={() => toggleFav(x)}>{x.favorite ? "★" : "☆"}</button>
+                                <button className={"iconbtn" + (x.favorite ? " on" : "")} title="Preferito" aria-label={x.favorite ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti"} onClick={() => toggleFav(x)}>
+                                  <Star fill={x.favorite ? "currentColor" : "none"} />
+                                </button>
                               </div>
                               {x.note ? <div className="qnote">{x.note}</div> : null}
                               {x.tags?.length ? <div className="qtags">{x.tags.map((t) => <span className="qtag" key={t}>#{t}</span>)}</div> : null}
@@ -657,11 +681,11 @@ export default function Desktop() {
                                 <span>{fmtSize(x.size)}</span><span>·</span>
                                 <span>agg. {fmtDate(x.updatedAt)}</span>
                                 {x.openCount ? <><span>·</span><span>{x.openCount}× aperto</span></> : null}
-                                {x.encrypted ? <><span>·</span><span className="enc">🔒</span></> : null}
+                                {x.encrypted ? <><span>·</span><span className="enc"><Lock /></span></> : null}
                               </div>
                               <div className="qactions">
-                                <button className="btn primary sm open" onClick={() => router.push(`/run/${x.id}`)}>▶ Apri</button>
-                                <button className="iconbtn" title="Modifica" onClick={() => setEditing(x)}>⋯</button>
+                                <button className="btn primary sm open" onClick={() => router.push(`/run/${x.id}`)}><Play /> Apri</button>
+                                <button className="iconbtn" title="Modifica" aria-label="Modifica quiz" onClick={() => setEditing(x)}><MoreVertical /></button>
                               </div>
                             </div>
                           </article>
@@ -738,11 +762,11 @@ function FolderTree({ node, depth, sel, expanded, counts, dropPath, onSelect, on
               onDragOver={(e) => { e.preventDefault(); setDropPath(child.path); }}
               onDragLeave={() => setDropPath((d) => (d === child.path ? null : d))}
               onDrop={(e) => { const id = e.dataTransfer.getData("text/quizid"); if (id) onDropQuiz(id, child.path); }}>
-              <span className={"caret" + (open ? " open" : "")} onClick={(e) => { e.stopPropagation(); if (hasKids) onToggle(child.path); }}>{hasKids ? "▸" : ""}</span>
-              <span className="fic">{open && hasKids ? "📂" : "📁"}</span>
+              <span className={"caret" + (open ? " open" : "")} onClick={(e) => { e.stopPropagation(); if (hasKids) onToggle(child.path); }}>{hasKids ? <ChevronRight /> : null}</span>
+              <span className="fic">{open && hasKids ? <FolderOpen /> : <FolderIcon />}</span>
               <span className="lbl">{child.name}</span>
               <span className="cnt">{counts.get(child.path) || 0}</span>
-              <span className="mini" title="Sottocartella" onClick={(e) => { e.stopPropagation(); onNew(child.path); }}>＋</span>
+              <span className="mini" title="Sottocartella" onClick={(e) => { e.stopPropagation(); onNew(child.path); }}><Plus /></span>
               <span className="mini" title="Rinomina" onClick={(e) => { e.stopPropagation(); onRename(child.path); }}>✎</span>
               <span className="mini" title="Elimina" onClick={(e) => { e.stopPropagation(); onDelete(child.path); }}>🗑</span>
             </div>
@@ -1103,15 +1127,15 @@ function AppearanceDialog({ look, onApply, onClose }) {
 }
 
 const EXPLORE_FEATURES = [
-  { fx: "◫", ft: "Spazi", fd: "Scrivanie separate e isolate. Crea, rinomina, ricolora dalla dock a sinistra." },
-  { fx: "📁", ft: "Cartelle annidate", fd: "Organizza in Materia/Capitolo. Trascina i quiz nelle cartelle." },
-  { fx: "＋", ft: "Carica HTML", fd: "Trascina o scegli i tuoi file .html: quiz, esami, slide, flashcard." },
-  { fx: "▶", ft: "Lettore sicuro", fd: "Ogni quiz gira isolato, in tab multiple, con zoom e schermo intero." },
-  { fx: "⏱", ft: "Timer d'esame", fd: "Simula l'esame: conto alla rovescia con avvisi giallo/rosso." },
-  { fx: "🔒", ft: "Vault cifrati", fd: "Proteggi uno spazio con una passphrase (cifratura AES-256 sul device)." },
-  { fx: "🛡", ft: "Guardian", fd: "Repliche automatiche multi-livello: anche su una vera cartella del PC. I dati non si perdono." },
-  { fx: "💾", ft: "Backup & Cestino", fd: "Backup completo, export/import e cestino per recuperare le eliminazioni." },
-  { fx: "⌘", ft: "Command palette", fd: "Premi ⌘K / Ctrl+K per saltare a qualsiasi quiz, spazio o comando." },
+  { icon: FolderOpen, ft: "Spazi", fd: "Scrivanie separate e isolate. Crea, rinomina, ricolora dalla dock a sinistra." },
+  { icon: FolderIcon, ft: "Cartelle annidate", fd: "Organizza in Materia/Capitolo. Trascina i quiz nelle cartelle." },
+  { icon: Upload, ft: "Carica HTML", fd: "Trascina o scegli i tuoi file .html: quiz, esami, slide, flashcard." },
+  { icon: Play, ft: "Lettore sicuro", fd: "Ogni quiz gira isolato, in tab multiple, con zoom e schermo intero." },
+  { icon: Timer, ft: "Timer d'esame", fd: "Simula l'esame: conto alla rovescia con avvisi giallo/rosso." },
+  { icon: Lock, ft: "Vault cifrati", fd: "Proteggi uno spazio con una passphrase (cifratura AES-256 sul device)." },
+  { icon: ShieldCheck, ft: "Guardian", fd: "Repliche automatiche multi-livello: anche su una vera cartella del PC. I dati non si perdono." },
+  { icon: Download, ft: "Backup & Cestino", fd: "Backup completo, export/import e cestino per recuperare le eliminazioni." },
+  { icon: Search, ft: "Command palette", fd: "Premi ⌘K / Ctrl+K per saltare a qualsiasi quiz, spazio o comando." },
 ];
 
 function ExploreDialog({ onClose, onUpload, onNewSpace, onAppearance }) {
@@ -1125,12 +1149,15 @@ function ExploreDialog({ onClose, onUpload, onNewSpace, onAppearance }) {
         </div>
 
         <div className="feature-grid">
-          {EXPLORE_FEATURES.map((f) => (
-            <div className="feature" key={f.ft}>
-              <div className="fx">{f.fx}</div>
-              <div><div className="ft">{f.ft}</div><div className="fd">{f.fd}</div></div>
-            </div>
-          ))}
+          {EXPLORE_FEATURES.map((f) => {
+            const Icon = f.icon;
+            return (
+              <div className="feature" key={f.ft}>
+                <div className="fx"><Icon /></div>
+                <div><div className="ft">{f.ft}</div><div className="fd">{f.fd}</div></div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="kbds">
@@ -1142,9 +1169,9 @@ function ExploreDialog({ onClose, onUpload, onNewSpace, onAppearance }) {
         </div>
 
         <div className="xcta">
-          <button className="btn primary" onClick={onUpload}>＋ Carica il primo quiz</button>
-          <button className="btn ghost" onClick={onNewSpace}>◫ Crea uno spazio</button>
-          <button className="btn ghost" onClick={onAppearance}>🎨 Personalizza</button>
+          <button className="btn primary" onClick={onUpload}><Upload /> Carica il primo quiz</button>
+          <button className="btn ghost" onClick={onNewSpace}><Plus /> Crea uno spazio</button>
+          <button className="btn ghost" onClick={onAppearance}><PaletteIcon /> Personalizza</button>
           <button className="btn subtle" onClick={onClose}>Inizia</button>
         </div>
       </div>
