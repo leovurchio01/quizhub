@@ -15,7 +15,7 @@ import { verifySession } from "@/lib/jwt";
 
 export const runtime = "nodejs";
 const MAX_BLOB = 8 * 1024 * 1024; // 8 MB per utente
-const SECRET = process.env.AUTH_SECRET || "insecure-dev-secret-set-AUTH_SECRET-in-prod";
+const DEV_SECRET = "insecure-dev-secret-set-AUTH_SECRET-in-prod";
 
 // Supporta sia i nomi di Vercel KV sia quelli di Upstash.
 const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
@@ -23,6 +23,12 @@ const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST
 
 function kvConfigured() {
   return !!(KV_URL && KV_TOKEN);
+}
+
+function authSecret() {
+  if (process.env.AUTH_SECRET) return process.env.AUTH_SECRET;
+  if (process.env.NODE_ENV !== "production") return DEV_SECRET;
+  return null;
 }
 
 async function kv(command) {
@@ -40,9 +46,11 @@ async function kv(command) {
 }
 
 async function userId() {
+  const secret = authSecret();
+  if (!secret) return null;
   const raw = cookies().get("qh_session")?.value;
   if (!raw) return null;
-  const payload = await verifySession(raw, SECRET);
+  const payload = await verifySession(raw, secret);
   // sub Google come chiave stabile e non indovinabile lato client.
   return payload?.sub || null;
 }
@@ -50,6 +58,9 @@ async function userId() {
 export async function GET() {
   if (!kvConfigured()) {
     return Response.json({ ok: false, reason: "sync-not-configured" }, { status: 501 });
+  }
+  if (!authSecret()) {
+    return Response.json({ ok: false, reason: "auth-secret-missing" }, { status: 503 });
   }
   const uid = await userId();
   if (!uid) return Response.json({ ok: false, reason: "unauthorized" }, { status: 401 });
@@ -64,6 +75,9 @@ export async function GET() {
 export async function PUT(req) {
   if (!kvConfigured()) {
     return Response.json({ ok: false, reason: "sync-not-configured" }, { status: 501 });
+  }
+  if (!authSecret()) {
+    return Response.json({ ok: false, reason: "auth-secret-missing" }, { status: 503 });
   }
   const uid = await userId();
   if (!uid) return Response.json({ ok: false, reason: "unauthorized" }, { status: 401 });

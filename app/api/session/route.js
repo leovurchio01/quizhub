@@ -17,8 +17,14 @@ export const runtime = "nodejs";
 
 const COOKIE = "qh_session";
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-const SECRET = process.env.AUTH_SECRET || "insecure-dev-secret-set-AUTH_SECRET-in-prod";
+const DEV_SECRET = "insecure-dev-secret-set-AUTH_SECRET-in-prod";
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 giorni
+
+function authSecret() {
+  if (process.env.AUTH_SECRET) return process.env.AUTH_SECRET;
+  if (process.env.NODE_ENV !== "production") return DEV_SECRET;
+  return null;
+}
 
 function cookieOpts() {
   return {
@@ -32,6 +38,8 @@ function cookieOpts() {
 
 export async function POST(req) {
   if (!CLIENT_ID) return NextResponse.json({ ok: false, reason: "login-not-configured" }, { status: 501 });
+  const secret = authSecret();
+  if (!secret) return NextResponse.json({ ok: false, reason: "auth-secret-missing" }, { status: 503 });
 
   const body = await req.json().catch(() => null);
   const credential = body?.credential;
@@ -40,7 +48,10 @@ export async function POST(req) {
   // Verifica l'ID token contro Google.
   let info;
   try {
-    const r = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(credential), { cache: "no-store" });
+    const r = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(credential), {
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
     if (!r.ok) return NextResponse.json({ ok: false, reason: "invalid-token" }, { status: 401 });
     info = await r.json();
   } catch {
@@ -55,7 +66,7 @@ export async function POST(req) {
   }
 
   const user = { id: info.sub, email: info.email, name: info.name || info.email };
-  const token = await signSession({ sub: user.id, email: user.email, name: user.name }, SECRET, MAX_AGE);
+  const token = await signSession({ sub: user.id, email: user.email, name: user.name }, secret, MAX_AGE);
 
   const res = NextResponse.json({ ok: true, user });
   res.cookies.set(COOKIE, token, cookieOpts());
@@ -63,9 +74,11 @@ export async function POST(req) {
 }
 
 export async function GET() {
+  const secret = authSecret();
+  if (!secret) return NextResponse.json({ user: null });
   const raw = cookies().get(COOKIE)?.value;
   if (!raw) return NextResponse.json({ user: null });
-  const payload = await verifySession(raw, SECRET);
+  const payload = await verifySession(raw, secret);
   if (!payload) return NextResponse.json({ user: null });
   return NextResponse.json({ user: { id: payload.sub, email: payload.email, name: payload.name } });
 }

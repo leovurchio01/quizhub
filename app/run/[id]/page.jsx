@@ -33,6 +33,7 @@ export default function Runner({ params }) {
   // Timer d'esame
   const [examLeft, setExamLeft] = useState(null); // secondi rimanenti o null
   const [examRunning, setExamRunning] = useState(false);
+  const [showExamDialog, setShowExamDialog] = useState(false);
 
   /* carica un quiz nel viewport */
   const loadQuiz = useCallback(async (id) => {
@@ -128,11 +129,14 @@ export default function Runner({ params }) {
     else el.requestFullscreen?.().catch(() => {});
   }
   function setExam() {
-    const raw = prompt("Durata esame in minuti (vuoto per annullare):", "60");
-    if (!raw) return;
-    const min = parseInt(raw, 10);
+    setShowExamDialog(true);
+  }
+  function confirmExam(minutes) {
+    const min = parseInt(minutes, 10);
     if (!Number.isFinite(min) || min <= 0) return;
-    setExamLeft(min * 60); setExamRunning(true);
+    setExamLeft(min * 60);
+    setExamRunning(true);
+    setShowExamDialog(false);
   }
   const examStr = useMemo(() => {
     if (examLeft == null) return null;
@@ -236,6 +240,39 @@ export default function Runner({ params }) {
           <button className="iconbtn" title="Azzera" aria-label="Azzera timer" onClick={() => { setExamLeft(null); setExamRunning(false); }}><X /></button>
         </div>
       )}
+      {showExamDialog && (
+        <ExamTimerDialog onClose={() => setShowExamDialog(false)} onConfirm={confirmExam} />
+      )}
+    </div>
+  );
+}
+
+function ExamTimerDialog({ onClose, onConfirm }) {
+  const [minutes, setMinutes] = useState("60");
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+        <h3>Timer esame</h3>
+        <p className="lead">Imposta la durata in minuti per avviare un conto alla rovescia visibile sopra al quiz.</p>
+        <div className="field">
+          <label>Durata (minuti)</label>
+          <input
+            autoFocus
+            type="number"
+            min="1"
+            value={minutes}
+            onChange={(e) => setMinutes(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onConfirm(minutes);
+              if (e.key === "Escape") onClose();
+            }}
+          />
+        </div>
+        <div className="row">
+          <button className="btn subtle" onClick={onClose}>Annulla</button>
+          <button className="btn primary" onClick={() => onConfirm(minutes)}>Avvia timer</button>
+        </div>
+      </div>
     </div>
   );
 }

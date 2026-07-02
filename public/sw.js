@@ -1,6 +1,6 @@
 /* Service worker minimale: cache dell'app-shell per l'uso offline.
    I quiz sono in IndexedDB, quindi restano disponibili senza rete. */
-const CACHE = "quizhub-os-v2";
+const CACHE = "quizhub-os-v3-0-1";
 const SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (e) => {

@@ -13,6 +13,7 @@ import {
   LogIn,
   MoreVertical,
   Palette as PaletteIcon,
+  Pencil,
   Play,
   Plus,
   Search,
@@ -132,12 +133,16 @@ export default function Desktop() {
   const [trash, setTrash] = useState(0);
   const [showTrash, setShowTrash] = useState(false);
   const [trashList, setTrashList] = useState([]);
+  const [confirmDlg, setConfirmDlg] = useState(null);
+  const [inputDlg, setInputDlg] = useState(null);
   const fileRef = useRef(null);
   const importRef = useRef(null);
 
   const activeSpace = useMemo(() => spaces?.find((s) => s.id === activeId) || null, [spaces, activeId]);
   const locked = !!(activeSpace?.vault && !hasVaultKey(activeId));
   const flash = useCallback((m) => { setToast(m); setTimeout(() => setToast(""), 2000); }, []);
+  const askConfirm = useCallback((config) => new Promise((resolve) => setConfirmDlg({ ...config, resolve })), []);
+  const askInput = useCallback((config) => new Promise((resolve) => setInputDlg({ ...config, resolve })), []);
 
   /* ---- bootstrap ---- */
   useEffect(() => {
@@ -173,7 +178,13 @@ export default function Desktop() {
   }, []);
 
   async function logout() {
-    if (!confirm("Uscire dall'account? I dati locali restano sul dispositivo.")) return;
+    const ok = await askConfirm({
+      title: "Esci dall'account?",
+      description: "La libreria locale resta su questo dispositivo. Verrà chiusa solo la sessione cloud.",
+      confirmLabel: "Esci",
+      tone: "danger",
+    });
+    if (!ok) return;
     try { await fetch("/api/session", { method: "DELETE" }); } catch {}
     setSession(null);
     flash("Uscito");
@@ -244,11 +255,23 @@ export default function Desktop() {
   }
   async function doRestore(id) { await restoreQuiz(id); setTrashList(await listTrash(activeId)); refresh(); flash("Quiz ripristinato"); }
   async function doPurge(id) {
-    if (!confirm("Eliminare DEFINITIVAMENTE questo quiz? Non è recuperabile.")) return;
+    const ok = await askConfirm({
+      title: "Eliminare definitivamente questo quiz?",
+      description: "Il file verra rimosso in modo irreversibile dal cestino.",
+      confirmLabel: "Elimina per sempre",
+      tone: "danger",
+    });
+    if (!ok) return;
     await purgeQuiz(id); setTrashList(await listTrash(activeId)); refresh(); flash("Eliminato definitivamente");
   }
   async function doEmptyTrash() {
-    if (!confirm("Svuotare il cestino? I quiz dentro verranno eliminati per sempre.")) return;
+    const ok = await askConfirm({
+      title: "Svuotare il cestino?",
+      description: "Tutti i quiz presenti nel cestino verranno eliminati in modo definitivo.",
+      confirmLabel: "Svuota cestino",
+      tone: "danger",
+    });
+    if (!ok) return;
     const n = await emptyTrash(activeId); setTrashList([]); setShowTrash(false); refresh(); flash(`Cestino svuotato (${n})`);
   }
 
@@ -320,7 +343,13 @@ export default function Desktop() {
     setExpanded((e) => { const n = new Set(e); n.has(p) ? n.delete(p) : n.add(p); return n; });
   }
   async function newFolder(parentPath) {
-    const name = prompt(parentPath ? `Nuova sottocartella dentro "${parentPath}":` : "Nuova cartella:");
+    const name = await askInput({
+      title: parentPath ? "Nuova sottocartella" : "Nuova cartella",
+      description: parentPath ? `La nuova cartella verra creata dentro "${parentPath}".` : "Crea una cartella nella libreria corrente.",
+      label: "Nome cartella",
+      placeholder: "es. Meccanica",
+      submitLabel: "Crea cartella",
+    });
     if (!name || !name.trim()) return;
     const path = normPath((parentPath ? parentPath + "/" : "") + name);
     await addFolder(activeId, path);
@@ -331,7 +360,14 @@ export default function Desktop() {
   async function doRenameFolder(path) {
     const parent = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
     const cur = path.slice(path.lastIndexOf("/") + 1);
-    const name = prompt("Rinomina cartella:", cur);
+    const name = await askInput({
+      title: "Rinomina cartella",
+      description: `Aggiorna il nome di "${cur}" mantenendo intatta la struttura interna.`,
+      label: "Nuovo nome",
+      initialValue: cur,
+      placeholder: "Nuovo nome cartella",
+      submitLabel: "Rinomina",
+    });
     if (!name || !name.trim() || name.trim() === cur) return;
     const next = normPath((parent ? parent + "/" : "") + name);
     await renameFolder(activeId, path, next);
@@ -339,7 +375,13 @@ export default function Desktop() {
     await refresh(); flash("Cartella rinominata");
   }
   async function doDeleteFolder(path) {
-    if (!confirm(`Eliminare la cartella "${path}"? I quiz dentro tornano alla cartella superiore.`)) return;
+    const ok = await askConfirm({
+      title: "Eliminare questa cartella?",
+      description: `I quiz contenuti in "${path}" torneranno nella cartella superiore.`,
+      confirmLabel: "Elimina cartella",
+      tone: "danger",
+    });
+    if (!ok) return;
     await deleteFolder(activeId, path);
     if (sel === path || (typeof sel === "string" && sel.startsWith(path + "/"))) setSel("__all__");
     await refresh(); flash("Cartella eliminata");
@@ -369,7 +411,13 @@ export default function Desktop() {
     } catch (e) { flash(e.message || "Passphrase errata"); }
   }
   async function onDeleteSpace(id) {
-    if (!confirm("Eliminare questo spazio e TUTTI i suoi quiz? Irreversibile.")) return;
+    const ok = await askConfirm({
+      title: "Eliminare questo spazio?",
+      description: "Tutti i quiz dello spazio verranno rimossi in modo irreversibile.",
+      confirmLabel: "Elimina spazio",
+      tone: "danger",
+    });
+    if (!ok) return;
     await deleteSpace(id); const s = await listSpaces();
     setSpaces(s); setActiveId(s[0].id); setShowManage(false); flash("Spazio eliminato");
   }
@@ -484,7 +532,7 @@ export default function Desktop() {
         <div className="brand">
           <span className="logo">QH</span>
           <span className="name">QuizHub<em> OS</em></span>
-          <span className="os-tag">v2 · local-first</span>
+          <span className="os-tag">v3.0.1 · local-first</span>
         </div>
         <span className="spacer" />
         <span className="clock">{clock}</span>
@@ -498,7 +546,7 @@ export default function Desktop() {
             {initials(session.user.name || session.user.email)}
           </button>
         ) : LOGIN_CONFIGURED && session === null ? (
-          <button className="iconbtn" title="Accedi con Google" aria-label="Accedi con Google" onClick={() => (window.location.href = "/login")}><LogIn /></button>
+          <button className="iconbtn" title="Accedi con Google" aria-label="Accedi con Google" onClick={() => router.push("/login")}><LogIn /></button>
         ) : null}
       </div>
 
@@ -740,6 +788,28 @@ export default function Desktop() {
           onSwitchSpace={(id) => { setPalette(false); setActiveId(id); }}
           onCmd={(c) => { setPalette(false); if (c === "upload") fileRef.current?.click(); else if (c === "appearance") setShowAppearance(true); else if (c === "guide") setShowExplore(true); else if (c === "newspace") setShowSpaceDlg(true); else if (c === "export") doExport(); else if (c === "newfolder") newFolder(""); }} />
       )}
+      {confirmDlg && (
+        <ConfirmDialog
+          title={confirmDlg.title}
+          description={confirmDlg.description}
+          confirmLabel={confirmDlg.confirmLabel}
+          tone={confirmDlg.tone}
+          onClose={() => { confirmDlg.resolve(false); setConfirmDlg(null); }}
+          onConfirm={() => { confirmDlg.resolve(true); setConfirmDlg(null); }}
+        />
+      )}
+      {inputDlg && (
+        <InputDialog
+          title={inputDlg.title}
+          description={inputDlg.description}
+          label={inputDlg.label}
+          placeholder={inputDlg.placeholder}
+          initialValue={inputDlg.initialValue}
+          submitLabel={inputDlg.submitLabel}
+          onClose={() => { inputDlg.resolve(null); setInputDlg(null); }}
+          onSubmit={(value) => { inputDlg.resolve(value); setInputDlg(null); }}
+        />
+      )}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );
@@ -767,8 +837,8 @@ function FolderTree({ node, depth, sel, expanded, counts, dropPath, onSelect, on
               <span className="lbl">{child.name}</span>
               <span className="cnt">{counts.get(child.path) || 0}</span>
               <span className="mini" title="Sottocartella" onClick={(e) => { e.stopPropagation(); onNew(child.path); }}><Plus /></span>
-              <span className="mini" title="Rinomina" onClick={(e) => { e.stopPropagation(); onRename(child.path); }}>✎</span>
-              <span className="mini" title="Elimina" onClick={(e) => { e.stopPropagation(); onDelete(child.path); }}>🗑</span>
+              <span className="mini" title="Rinomina" onClick={(e) => { e.stopPropagation(); onRename(child.path); }}><Pencil /></span>
+              <span className="mini" title="Elimina" onClick={(e) => { e.stopPropagation(); onDelete(child.path); }}><Trash2 /></span>
             </div>
             {open && hasKids && (
               <FolderTree node={child} depth={depth + 1} sel={sel} expanded={expanded} counts={counts} dropPath={dropPath}
@@ -941,6 +1011,51 @@ function TrashDialog({ items, onClose, onRestore, onPurge, onEmpty }) {
         <div className="row" style={{ marginTop: 12 }}>
           {items.length > 0 && <button className="btn danger" onClick={onEmpty}>Svuota cestino</button>}
           <button className="btn subtle" onClick={onClose}>Chiudi</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConfirmDialog({ title, description, confirmLabel = "Conferma", tone = "primary", onClose, onConfirm }) {
+  const confirmClass = tone === "danger" ? "btn danger" : "btn primary";
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
+        <h3>{title}</h3>
+        {description ? <p className="lead">{description}</p> : null}
+        <div className="row">
+          <button className="btn subtle" onClick={onClose}>Annulla</button>
+          <button className={confirmClass} onClick={onConfirm}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InputDialog({ title, description, label, placeholder, initialValue = "", submitLabel = "Continua", onClose, onSubmit }) {
+  const [value, setValue] = useState(initialValue);
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
+        <h3>{title}</h3>
+        {description ? <p className="lead">{description}</p> : null}
+        <div className="field">
+          <label>{label}</label>
+          <input
+            autoFocus
+            value={value}
+            placeholder={placeholder}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onSubmit(value);
+              if (e.key === "Escape") onClose();
+            }}
+          />
+        </div>
+        <div className="row">
+          <button className="btn subtle" onClick={onClose}>Annulla</button>
+          <button className="btn primary" onClick={() => onSubmit(value)}>{submitLabel}</button>
         </div>
       </div>
     </div>

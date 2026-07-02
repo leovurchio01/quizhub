@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
 export default function LoginPage() {
+  const router = useRouter();
   const btnRef = useRef(null);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -11,7 +13,7 @@ export default function LoginPage() {
   useEffect(() => {
     // Login non configurato: la home è aperta, torna indietro.
     if (!CLIENT_ID) {
-      window.location.href = "/";
+      router.replace("/");
       return;
     }
 
@@ -24,7 +26,7 @@ export default function LoginPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ credential: resp.credential }),
         });
-        if (r.ok) window.location.href = "/";
+        if (r.ok) router.replace("/");
         else setErr("Accesso non riuscito. Riprova.");
       } catch {
         setErr("Errore di rete.");
@@ -54,7 +56,7 @@ export default function LoginPage() {
     };
     document.body.appendChild(s);
     return () => s.remove();
-  }, []);
+  }, [router]);
 
   return (
     <div className="authwrap">
@@ -78,7 +80,7 @@ export default function LoginPage() {
           Nessun dato lascia il dispositivo senza il tuo consenso. Il login serve solo per il sync opzionale.
         </p>
         <p className="hint" style={{ marginTop: 6 }}>
-          <a onClick={() => (window.location.href = "/")} style={{ cursor: "pointer", color: "var(--brand-ink)" }}>← Continua senza accedere</a>
+          <a onClick={() => router.replace("/")} style={{ cursor: "pointer", color: "var(--brand-ink)" }}>← Continua senza accedere</a>
         </p>
       </div>
     </div>

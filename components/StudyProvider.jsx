@@ -265,11 +265,12 @@ export default function StudyProvider() {
 /* ============================================================ */
 function BreakOverlay({ seconds, strictness, onEnd }) {
   const [holdPct, setHoldPct] = useState(0);
+  const [showConfirm, setShowConfirm] = useState(false);
   const raf = useRef(0);
   const holdStart = useRef(0);
 
   function softEnd() { onEnd(); }
-  function mediumEnd() { if (confirm("Vuoi davvero tornare a studiare prima della fine della pausa?")) onEnd(); }
+  function mediumEnd() { setShowConfirm(true); }
 
   function startHold() {
     holdStart.current = Date.now();
@@ -306,6 +307,18 @@ function BreakOverlay({ seconds, strictness, onEnd }) {
           </button>
         )}
       </div>
+      {showConfirm && (
+        <div className="scrim" onClick={() => setShowConfirm(false)}>
+          <div className="sheet" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
+            <h3>Terminare la pausa?</h3>
+            <p className="lead">Stai per rientrare prima del previsto. Se confermi, la sessione di studio riparte subito.</p>
+            <div className="row">
+              <button className="btn subtle" onClick={() => setShowConfirm(false)}>Continua pausa</button>
+              <button className="btn primary" onClick={onEnd}>Riprendi studio</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
