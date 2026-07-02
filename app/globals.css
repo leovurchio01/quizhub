@@ -449,3 +449,94 @@ button { font-family: inherit; }
   color: var(--muted); font-size: 0.85rem; font-weight: 600; transition: 0.14s; }
 .opt:hover { color: var(--ink); border-color: var(--stroke-strong); }
 .opt.on { background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; border-color: transparent; }
+
+/* ============================================================
+   Guardian (protezione dati multi-livello)
+   ============================================================ */
+.shieldscore { display: flex; align-items: center; gap: 5px; margin: 4px 0 14px; }
+.shieldscore i { width: 26px; height: 8px; border-radius: 6px; background: var(--panel-2); border: 1px solid var(--stroke); }
+.shieldscore i.on { background: linear-gradient(90deg, var(--brand), var(--brand-2)); border-color: transparent;
+  box-shadow: 0 0 10px -2px var(--brand); }
+.shieldscore span { margin-left: 6px; font-family: var(--font-mono); font-size: 0.74rem; color: var(--muted); }
+.layerlist { display: flex; flex-direction: column; gap: 10px; }
+.layer { display: flex; gap: 12px; padding: 12px 14px; border: 1px solid var(--stroke); border-radius: 14px;
+  background: var(--panel-2); opacity: 0.75; }
+.layer.on { opacity: 1; border-color: var(--stroke-strong); }
+.layer .lx { font-size: 1.25rem; flex: 0 0 auto; width: 28px; text-align: center; }
+.layer .lt { font-weight: 700; font-size: 0.92rem; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.layer .lstate { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 500; color: var(--muted); }
+.layer .lstate.ok { color: var(--brand-ink); }
+.layer .ld { color: var(--muted); font-size: 0.8rem; line-height: 1.45; margin-top: 2px; }
+
+/* ============================================================
+   Badge di sicurezza nel runner
+   ============================================================ */
+.secinfo { display: flex; gap: 6px; align-items: center; }
+@media (max-width: 760px) { .secinfo { display: none; } }
+.secpill { font-family: var(--font-mono); font-size: 0.64rem; color: var(--muted); border: 1px solid var(--stroke);
+  border-radius: 99px; padding: 3px 9px; white-space: nowrap; cursor: default; }
+.secpill.ok { color: var(--brand-ink); border-color: var(--stroke-strong); }
+.secpill.warn { color: var(--gold); border-color: var(--gold); }
+
+/* ============================================================
+   Study Provider — widget timer globale
+   ============================================================ */
+.study-widget { position: fixed; left: 18px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 55; }
+@media (max-width: 720px) { .study-widget { left: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); } }
+.study-fab { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 99px;
+  border: 1px solid var(--stroke-strong); background: var(--panel-solid); color: var(--ink); cursor: pointer;
+  box-shadow: var(--shadow); backdrop-filter: blur(12px); font-family: var(--font-mono); transition: 0.15s; }
+.study-fab:hover { transform: translateY(-2px); }
+.study-fab .sf-time { font-size: 0.92rem; font-weight: 700; letter-spacing: 0.02em; }
+.study-fab .sf-dot { width: 8px; height: 8px; border-radius: 99px; background: var(--faint); }
+.study-widget.run .sf-dot { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 30%, transparent); animation: pulse 2s ease-in-out infinite; }
+.study-widget.brk .sf-dot { background: var(--accent); }
+@keyframes pulse { 50% { opacity: 0.4; } }
+
+.study-panel { width: 260px; background: var(--panel-solid); border: 1px solid var(--stroke-strong); border-radius: 16px;
+  padding: 12px 13px; box-shadow: var(--shadow); backdrop-filter: blur(16px); animation: pop 0.18s ease; }
+.sp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.sp-label { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.iconbtn.sm2 { width: 26px; height: 26px; flex: 0 0 26px; border-radius: 7px; font-size: 0.8rem; }
+.sp-time { text-align: center; margin: 4px 0 10px; }
+.sp-time .spt { font-family: var(--font-mono); font-size: 2.2rem; font-weight: 700; letter-spacing: 0.01em; line-height: 1; }
+.sp-time .spt.warn { color: var(--gold); animation: pulse 1s steps(2) infinite; }
+.sp-bar { height: 5px; border-radius: 99px; background: var(--panel-2); overflow: hidden; margin-top: 8px; }
+.sp-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--brand), var(--brand-2)); transition: width 0.9s linear; }
+.study-widget.brk .sp-bar i { background: linear-gradient(90deg, var(--accent), var(--brand)); }
+.sp-modes { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.chip.xs { padding: 4px 9px; font-size: 0.72rem; }
+.sp-ctrl { display: flex; gap: 6px; margin-bottom: 10px; }
+.sp-ctrl .btn.primary { flex: 1; }
+.sp-stats { display: flex; justify-content: space-between; gap: 6px; font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted);
+  border-top: 1px solid var(--stroke); padding-top: 8px; }
+
+/* overlay pausa */
+.break-overlay { position: fixed; inset: 0; z-index: 95; display: grid; place-items: center; padding: 20px;
+  background: radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--accent) 14%, var(--bg)), var(--bg));
+  backdrop-filter: blur(8px); animation: fade 0.25s ease; }
+.break-card { text-align: center; max-width: 460px; }
+.break-emoji { font-size: 3rem; margin-bottom: 6px; animation: float 4s ease-in-out infinite; }
+.break-card h2 { font-family: var(--font-display); font-size: 1.9rem; margin: 0 0 8px; }
+.break-card p { color: var(--muted); margin: 0 auto 12px; max-width: 380px; }
+.break-time { font-family: var(--font-mono); font-size: 3.6rem; font-weight: 700; margin: 8px 0 6px; letter-spacing: 0.02em; }
+.break-copy { font-size: 0.9rem; }
+.btn.ghost.hold { position: relative; overflow: hidden; user-select: none; -webkit-user-select: none; min-width: 240px; }
+.btn.ghost.hold .hold-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: color-mix(in srgb, var(--brand) 45%, transparent); }
+.btn.ghost.hold .hold-label { position: relative; z-index: 1; }
+
+/* impostazioni: toggle */
+.tgl { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--ink); margin: 8px 0; cursor: pointer; }
+.tgl input { width: auto; }
+
+/* ---------- Focus mode: nasconde il superfluo ---------- */
+html[data-focus] .dock,
+html[data-focus] .stats,
+html[data-focus] .folderpanel,
+html[data-focus] .menubar .clock,
+html[data-focus] .brand .os-tag { display: none !important; }
+html[data-focus] .layout { grid-template-columns: 1fr; }
+html[data-focus] .workspace { grid-template-columns: 1fr; }
+html[data-focus] .menubar { opacity: 0.5; transition: opacity 0.2s; }
+html[data-focus] .menubar:hover { opacity: 1; }

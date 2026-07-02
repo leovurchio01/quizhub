@@ -38,6 +38,16 @@ import {
 } from "@/lib/db";
 import { createVault, unlockVault } from "@/lib/crypto";
 import { pushSpace, pullSpace, SYNC_STATES } from "@/lib/sync";
+import {
+  startGuardian,
+  onGuardianChange,
+  getGuardianState,
+  checkRecovery,
+  restoreFromReplica,
+  connectBackupFolder,
+  reauthorizeFolder,
+  disconnectBackupFolder,
+} from "@/lib/guardian";
 
 const LOGIN_CONFIGURED = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 const SPINE = ["#5b8cff", "#21e6c1", "#ffcf5c", "#7c5cff", "#ff5d73", "#34e39a", "#ff8ac4", "#8aa0c8"];
@@ -94,6 +104,8 @@ export default function Desktop() {
   const [syncing, setSyncing] = useState(false);
   const [storage, setStorage] = useState(null);
   const [showProtect, setShowProtect] = useState(false);
+  const [guard, setGuard] = useState(null);
+  const [recovery, setRecovery] = useState(null);
   const [trash, setTrash] = useState(0);
   const [showTrash, setShowTrash] = useState(false);
   const [trashList, setTrashList] = useState([]);
@@ -122,6 +134,17 @@ export default function Desktop() {
       // Chiede al browser di rendere lo storage persistente (anti-sfratto).
       await requestPersistence().catch(() => {});
       setStorage(await storageInfo().catch(() => null));
+      // Guardian: repliche automatiche multi-livello + auto-riparazione.
+      try {
+        const gs = await startGuardian();
+        setGuard(gs);
+        onGuardianChange(setGuard);
+        const rec = await checkRecovery();
+        if (rec) setRecovery(rec);
+        // I permessi sulla cartella decadono a ogni riavvio del browser:
+        // serve un click dell'utente per riattivarli.
+        else if (gs.folder?.connected && gs.folder?.permission !== "granted") setShowProtect(true);
+      } catch {}
     })().catch(() => setSpaces([]));
     fetch("/api/session").then((r) => r.json()).then((s) => setSession(s?.user ? s : null)).catch(() => setSession(null));
   }, []);
@@ -220,6 +243,38 @@ export default function Desktop() {
     if (announce) flash(ok ? "Dati protetti 🔒" : "Scarica un backup per la massima sicurezza 💾");
     return ok;
   }, [flash]);
+
+  /* ---- Guardian: cartella di backup reale + auto-riparazione ---- */
+  async function doConnectFolder() {
+    try {
+      const name = await connectBackupFolder();
+      setGuard(getGuardianState());
+      flash(`Cartella "${name}" collegata: backup automatici attivi 🛡`);
+    } catch (e) {
+      if (e?.name !== "AbortError") flash(e?.message || "Impossibile collegare la cartella");
+    }
+  }
+  async function doReauthFolder() {
+    const ok = await reauthorizeFolder().catch(() => false);
+    setGuard(getGuardianState());
+    flash(ok ? "Backup su cartella riattivati 🛡" : "Permesso non concesso");
+  }
+  async function doDisconnectFolder() {
+    await disconnectBackupFolder().catch(() => {});
+    setGuard(getGuardianState());
+    flash("Cartella di backup scollegata");
+  }
+  async function doRecovery() {
+    try {
+      const r = await restoreFromReplica();
+      setRecovery(null);
+      setSpaces(await listSpaces());
+      await refresh();
+      flash(`Ripristinati ${r.quizzes} quiz da ${r.spaces} spazi 💠`);
+    } catch (e) {
+      flash(e?.message || "Ripristino fallito");
+    }
+  }
 
   /* ---- backup COMPLETO (tutti gli spazi) ---- */
   async function doFullExport() {
@@ -445,10 +500,12 @@ export default function Desktop() {
                 <span>{locked ? "Spazio cifrato — bloccato" : "Libreria quiz · esami · presentazioni"}</span>
                 {activeSpace?.vault && <span className="pill">🔒 vault cifrato</span>}
                 {activeSpace?.owner && activeSpace.owner !== "local" && <span className="pill">{activeSpace.owner}</span>}
-                {storage && storage.supported && !storage.persisted && (
+                {storage && storage.supported && (
                   <span className="pill" style={{ cursor: "pointer" }}
-                    title="Come mettere al sicuro i tuoi dati" onClick={() => setShowProtect(true)}>
-                    🛡 proteggi i dati
+                    title="Protezione dei dati: repliche automatiche multi-livello" onClick={() => setShowProtect(true)}>
+                    🛡 {guard?.folder?.connected && guard?.folder?.permission === "granted"
+                      ? "guardian attivo"
+                      : storage.persisted ? "guardian" : "proteggi i dati"}
                   </span>
                 )}
               </div>
@@ -627,10 +684,14 @@ export default function Desktop() {
       )}
       {showAppearance && <AppearanceDialog look={look} onApply={applyLook} onClose={() => setShowAppearance(false)} />}
       {showProtect && (
-        <DataProtectionDialog storage={storage}
+        <DataProtectionDialog storage={storage} guard={guard} cloud={!!session?.user}
           onRetry={() => tryPersist(true)}
           onBackup={() => { setShowProtect(false); doFullExport(); }}
+          onConnectFolder={doConnectFolder} onReauthFolder={doReauthFolder} onDisconnectFolder={doDisconnectFolder}
           onClose={() => setShowProtect(false)} />
+      )}
+      {recovery && (
+        <RecoveryDialog recovery={recovery} onRestore={doRecovery} onClose={() => setRecovery(null)} />
       )}
       {showExplore && (
         <ExploreDialog onClose={dismissExplore}
@@ -691,6 +752,7 @@ function EditSheet({ quiz, folders, onClose, onSave, onDelete }) {
   const [folder, setFolder] = useState(quiz.folder || "");
   const [note, setNote] = useState(quiz.note || "");
   const [tags, setTags] = useState((quiz.tags || []).join(", "));
+  const [net, setNet] = useState(!!quiz.net);
   return (
     <div className="scrim" onClick={onClose}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
@@ -702,9 +764,18 @@ function EditSheet({ quiz, folders, onClose, onSave, onDelete }) {
         </div>
         <div className="field"><label>Tag (separati da virgola)</label><input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="analisi, capitolo-3, ripasso" /></div>
         <div className="field"><label>Nota</label><textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Cosa copre, quando ripassarlo…" /></div>
+        <div className="field">
+          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+            <input type="checkbox" checked={net} onChange={(e) => setNet(e.target.checked)} style={{ width: "auto" }} />
+            🌐 Consenti risorse esterne (immagini/font da Internet)
+          </label>
+          <p className="hint" style={{ margin: "4px 0 0" }}>
+            Di default ogni quiz gira completamente offline. Attiva solo se il quiz usa immagini o font online: fetch e script esterni restano comunque bloccati.
+          </p>
+        </div>
         <div className="row">
           <button className="btn subtle" onClick={onClose}>Annulla</button>
-          <button className="btn primary" onClick={() => onSave({ name: name.trim() || quiz.name, folder: folder.trim().replace(/^\/+|\/+$/g, ""), note, tags: tags.split(",").map((t) => t.trim()).filter(Boolean) })}>Salva</button>
+          <button className="btn primary" onClick={() => onSave({ name: name.trim() || quiz.name, folder: folder.trim().replace(/^\/+|\/+$/g, ""), note, tags: tags.split(",").map((t) => t.trim()).filter(Boolean), net })}>Salva</button>
         </div>
         <div className="row"><button className="btn danger" onClick={onDelete}>🗑 Sposta nel cestino</button></div>
       </div>
@@ -841,50 +912,107 @@ function TrashDialog({ items, onClose, onRestore, onPurge, onEmpty }) {
   );
 }
 
-function DataProtectionDialog({ storage, onRetry, onBackup, onClose }) {
-  const standalone = typeof window !== "undefined" &&
-    ((window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true);
+function fmtTime(ts) {
+  if (!ts) return null;
+  try { return new Date(ts).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }); } catch { return null; }
+}
+
+function DataProtectionDialog({ storage, guard, cloud, onRetry, onBackup, onConnectFolder, onReauthFolder, onDisconnectFolder, onClose }) {
   const persisted = !!storage?.persisted;
   const pct = storage?.quota ? Math.min(100, Math.round((storage.usage / storage.quota) * 100)) : 0;
+  const opfs = guard?.opfs;
+  const folder = guard?.folder;
+  const folderActive = folder?.connected && folder?.permission === "granted";
+
+  // Punteggio: L1 sempre attivo; +persistenza; +replica OPFS; +cartella; +cloud
+  const layers = [
+    { on: true, ic: "💽", name: "Database del browser", state: persisted ? "attivo · persistente" : "attivo",
+      desc: persisted
+        ? "IndexedDB protetto dallo sfratto automatico."
+        : "Il browser potrebbe liberare spazio in casi estremi: gli altri livelli ti coprono.",
+      action: !persisted && <button className="btn ghost sm" onClick={onRetry}>🔄 Richiedi persistenza</button> },
+    { on: !!opfs?.supported, ic: "🧬", name: "Replica automatica (doppio slot)",
+      state: !opfs?.supported ? "non supportata da questo browser"
+        : opfs.lastSavedAt ? `attiva · gen. ${opfs.generation} · ${fmtTime(opfs.lastSavedAt)}` : "attiva · in attesa della prima modifica",
+      desc: opfs?.supported
+        ? "Copia integrale con checksum SHA-256 in un'area separata: se il database si corrompe, QuizHub la rileva e propone il ripristino da solo."
+        : "Su questo browser la replica interna non è disponibile: usa la cartella di backup o i backup manuali." },
+    { on: !!folderActive, ic: "📂", name: "Cartella sul disco (fuori dal browser)",
+      state: !folder?.supported ? "serve Chrome o Edge"
+        : !folder?.connected ? "non collegata"
+        : folder.permission !== "granted" ? `collegata a “${folder.name}” · da riattivare`
+        : `attiva · “${folder.name}”${folder.lastSavedAt ? " · " + fmtTime(folder.lastSavedAt) : ""}`,
+      desc: "Il livello più forte: ogni modifica scrive un file vero sul tuo PC (+ copie giornaliere, ultime 7). Sopravvive anche a “cancella dati di navigazione”.",
+      action: folder?.supported && (
+        !folder?.connected
+          ? <button className="btn ghost sm" onClick={onConnectFolder}>📂 Collega una cartella</button>
+          : folder.permission !== "granted"
+            ? <span style={{ display: "inline-flex", gap: 6 }}>
+                <button className="btn ghost sm" onClick={onReauthFolder}>🔓 Riattiva</button>
+                <button className="btn subtle sm" onClick={onDisconnectFolder}>Scollega</button>
+              </span>
+            : <button className="btn subtle sm" onClick={onDisconnectFolder}>Scollega</button>
+      ) },
+    { on: !!cloud, ic: "☁︎", name: "Cloud (zero-knowledge)",
+      state: cloud ? "account collegato" : "opzionale · accedi per attivarlo",
+      desc: "Sync cifrato per portare gli spazi su altri dispositivi. I vault restano illeggibili anche per il server." },
+  ];
+  const score = layers.filter((l) => l.on).length + (persisted ? 1 : 0);
+  const max = 5;
+
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="sheet" style={{ maxHeight: "88vh", overflow: "auto" }} onClick={(e) => e.stopPropagation()}>
-        <h3>🛡 Protezione dei dati</h3>
-        <p className="lead" style={{ marginBottom: 14 }}>
-          {persisted
-            ? "✅ Ottimo: il browser ha reso lo storage persistente. I tuoi quiz sono protetti dalla cancellazione automatica."
-            : "I tuoi quiz sono salvati in questo browser. Di norma restano lì, ma alcuni browser possono cancellarli se lo spazio è pieno. Ecco come metterti al sicuro al 100%."}
-          {storage?.quota ? ` · ${fmtSize(storage.usage)} usati (${pct}%).` : ""}
+      <div className="sheet" style={{ maxHeight: "88vh", overflow: "auto", maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+        <h3>🛡 Protezione dei dati — Guardian</h3>
+        <p className="lead" style={{ marginBottom: 8 }}>
+          QuizHub replica i tuoi dati su più livelli indipendenti, in automatico.
+          {storage?.quota ? ` ${fmtSize(storage.usage)} usati (${pct}%).` : ""}
         </p>
-
-        {!persisted && (
-          <>
-            <div className="feature" style={{ marginBottom: 10 }}>
-              <div className="fx">💾</div>
-              <div><div className="ft">Scarica un backup (garanzia sicura)</div>
-                <div className="fd">Un file con tutti i tuoi spazi e progressi. È la protezione più forte: se cambi PC o pulisci il browser, lo reimporti e torni com'eri. I vault restano cifrati anche nel file.</div></div>
-            </div>
-            <div className="feature" style={{ marginBottom: 10 }}>
-              <div className="fx">📲</div>
-              <div><div className="ft">Aggiungi alla Home / ai preferiti</div>
-                <div className="fd">{standalone
-                  ? "L'app è installata: molti browser ora proteggono lo storage automaticamente. Prova “Riprova a proteggere”."
-                  : "Installa QuizHub (Condividi → Aggiungi a Home su iPad, o l'icona “installa” su desktop): così la maggior parte dei browser concede la persistenza da sola."}</div></div>
-            </div>
-          </>
-        )}
-
-        <div className="row" style={{ marginTop: 4 }}>
-          <button className="btn primary" onClick={onBackup}>💾 Scarica backup completo</button>
+        <div className="shieldscore" aria-hidden>
+          {Array.from({ length: max }).map((_, i) => <i key={i} className={i < score ? "on" : ""} />)}
+          <span>{score}/{max}</span>
         </div>
-        {!persisted && (
-          <div className="row"><button className="btn ghost" onClick={onRetry}>🔄 Riprova a proteggere lo storage</button></div>
-        )}
-        <div className="row"><button className="btn subtle" onClick={onClose}>Chiudi</button></div>
 
+        <div className="layerlist">
+          {layers.map((l) => (
+            <div className={"layer" + (l.on ? " on" : "")} key={l.name}>
+              <div className="lx">{l.ic}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="lt">{l.name} <span className={"lstate" + (l.on ? " ok" : "")}>{l.state}</span></div>
+                <div className="ld">{l.desc}</div>
+                {l.action ? <div style={{ marginTop: 6 }}>{l.action}</div> : null}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="row" style={{ marginTop: 12 }}>
+          <button className="btn primary" onClick={onBackup}>💾 Scarica backup completo</button>
+          <button className="btn subtle" onClick={onClose}>Chiudi</button>
+        </div>
         <p className="hint" style={{ marginTop: 6 }}>
-          Nota: la persistenza dipende dal browser e non è sempre concedibile (specie su iPad/Safari). Il backup funziona ovunque.
+          I vault restano cifrati (AES-256) in ogni replica: nessun livello vede i contenuti in chiaro.
         </p>
+      </div>
+    </div>
+  );
+}
+
+function RecoveryDialog({ recovery, onRestore, onClose }) {
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <h3>💠 Trovata una copia di sicurezza</h3>
+        <p className="lead">
+          La libreria risulta vuota, ma il Guardian conserva una replica verificata
+          del {fmtDate(recovery.savedAt)} con <b>{recovery.quizzes} quiz</b> in {recovery.spaces} spazi.
+          Vuoi ripristinarla?
+        </p>
+        <div className="row">
+          <button className="btn primary" onClick={onRestore}>💠 Ripristina tutto</button>
+          <button className="btn subtle" onClick={onClose}>Ignora</button>
+        </div>
+        <p className="hint">Il ripristino non tocca eventuali dati già presenti: aggiunge ciò che manca.</p>
       </div>
     </div>
   );
@@ -970,6 +1098,7 @@ const EXPLORE_FEATURES = [
   { fx: "▶", ft: "Lettore sicuro", fd: "Ogni quiz gira isolato, in tab multiple, con zoom e schermo intero." },
   { fx: "⏱", ft: "Timer d'esame", fd: "Simula l'esame: conto alla rovescia con avvisi giallo/rosso." },
   { fx: "🔒", ft: "Vault cifrati", fd: "Proteggi uno spazio con una passphrase (cifratura AES-256 sul device)." },
+  { fx: "🛡", ft: "Guardian", fd: "Repliche automatiche multi-livello: anche su una vera cartella del PC. I dati non si perdono." },
   { fx: "💾", ft: "Backup & Cestino", fd: "Backup completo, export/import e cestino per recuperare le eliminazioni." },
   { fx: "⌘", ft: "Command palette", fd: "Premi ⌘K / Ctrl+K per saltare a qualsiasi quiz, spazio o comando." },
 ];

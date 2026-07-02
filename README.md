@@ -87,9 +87,16 @@ It was built for exam season: collect your HTML quizzes once, organize them into
 
 ### 🔒 Security & privacy
 - Untrusted HTML runs in a **truly isolated sandbox** (opaque origin).
+- **Network‑locked quizzes**: a per‑quiz CSP blocks all Internet access by default (opt‑in for remote images/fonts; fetch stays blocked).
+- **Integrity badge**: each quiz is SHA‑256 fingerprinted and re‑verified on every open.
 - **AES‑256 encrypted vault spaces** with a passphrase (end‑to‑end, on device).
 - **Zero‑knowledge cloud sync** — the server only ever stores ciphertext.
 - Strict **Content‑Security‑Policy** and hardened HTTP headers.
+
+### 🛡 Guardian — storage that survives
+- **Multi‑layer automatic replication**: IndexedDB → OPFS replica (A/B slots + SHA‑256 checksums) → **a real folder on your disk** (File System Access API; latest + 7 daily copies) → optional cloud.
+- **Self‑healing**: if the database is ever wiped, QuizHub detects the surviving replica at boot and offers one‑click recovery.
+- Vaults stay **encrypted in every replica** — zero‑knowledge across all layers.
 
 ### ☁️ Backup & sync
 - **Export / Import** an entire space as portable JSON.
@@ -262,9 +269,10 @@ app/
   api/sync/route.js        optional cloud sync (zero‑knowledge)
 lib/
   db.js                    IndexedDB: spaces, nested folders, transparent encryption
+  guardian.js              multi‑layer replication (OPFS + disk folder) & self‑healing
   crypto.js                Web Crypto (AES‑GCM, PBKDF2)
   jwt.js                   sign/verify the session cookie (HMAC)
-  sandbox.js               secure srcdoc bridge + storage shim
+  sandbox.js               secure srcdoc bridge + storage shim + per‑quiz CSP
   sync.js                  sync client
   plan.js                  plan / feature‑flag scaffolding
 next.config.mjs            CSP + security headers

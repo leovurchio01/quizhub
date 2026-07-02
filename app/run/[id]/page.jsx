@@ -10,6 +10,7 @@ import {
   markOpened,
 } from "@/lib/db";
 import { buildSandboxDoc, parseSandboxMessage, SANDBOX_ATTR } from "@/lib/sandbox";
+import { sha256Hex } from "@/lib/crypto";
 
 export default function Runner({ params }) {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function Runner({ params }) {
   const [picker, setPicker] = useState(false);
   const [siblings, setSiblings] = useState([]);
   const [activeQuiz, setActiveQuiz] = useState(null);
+  const [integrity, setIntegrity] = useState(null); // true|false|null (senza hash)
 
   // Timer d'esame
   const [examLeft, setExamLeft] = useState(null); // secondi rimanenti o null
@@ -35,13 +37,21 @@ export default function Runner({ params }) {
   const loadQuiz = useCallback(async (id) => {
     setStatus("loading");
     setDoc(null);
+    setIntegrity(null);
     try {
       const quiz = await getQuiz(id);
       if (!quiz) { setStatus("notfound"); return; }
       setActiveQuiz(quiz);
       const html = await getQuizHtml(quiz); // può lanciare se vault bloccato
+      // Verifica d'integrità: l'HTML corrisponde ancora al fingerprint
+      // registrato al caricamento? (rileva corruzioni o manomissioni)
+      if (quiz.hash) {
+        sha256Hex(html).then((h) => setIntegrity(h === quiz.hash)).catch(() => setIntegrity(null));
+      } else {
+        setIntegrity(null);
+      }
       const snapshot = await loadQuizStorage(quiz);
-      setDoc(buildSandboxDoc(html, snapshot));
+      setDoc(buildSandboxDoc(html, snapshot, { allowRemote: !!quiz.net }));
       setStatus("ready");
       markOpened(id).catch(() => {});
       // sibling per il picker
@@ -147,6 +157,16 @@ export default function Runner({ params }) {
             </div>
           ))}
           <button className="iconbtn" title="Apri un altro quiz" onClick={() => setPicker((p) => !p)}>＋</button>
+        </div>
+        <div className="secinfo" aria-hidden>
+          <span className="secpill" title="Il quiz gira in un iframe sandbox a origine opaca: non può toccare i tuoi dati.">🔐 isolato</span>
+          <span className="secpill" title={activeQuiz?.net
+            ? "Questo quiz può caricare immagini/font esterni. Fetch e script esterni restano bloccati."
+            : "Rete completamente bloccata: il quiz non può contattare Internet."}>
+            {activeQuiz?.net ? "🌐 risorse esterne" : "⛔ offline"}
+          </span>
+          {integrity === true && <span className="secpill ok" title="L'HTML corrisponde al fingerprint SHA-256 registrato al caricamento.">✓ integro</span>}
+          {integrity === false && <span className="secpill warn" title="L'HTML NON corrisponde più al fingerprint originale: file corrotto o modificato.">⚠ modificato</span>}
         </div>
         <div className="winbtns">
           <button className="iconbtn" title="Zoom -" onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.1).toFixed(2)))}>－</button>

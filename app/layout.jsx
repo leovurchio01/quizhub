@@ -1,5 +1,6 @@
 import "./globals.css";
 import SWRegister from "@/components/SWRegister";
+import StudyProvider from "@/components/StudyProvider";
 
 const SITE_URL = "https://quizhub-psi.vercel.app";
 const DESCRIPTION =
@@ -15,9 +16,11 @@ export const metadata = {
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "QuizHub OS" },
   icons: {
     icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
+    shortcut: [{ url: "/favicon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
@@ -59,6 +62,7 @@ export default function RootLayout({ children }) {
       </head>
       <body>
         {children}
+        <StudyProvider />
         <SWRegister />
       </body>
     </html>

@@ -15,11 +15,14 @@ const CSP = [
     : `script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client`,
   `style-src 'self' 'unsafe-inline' ${GSI}style`,
   "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
+  "media-src 'self' data: blob: https:",
+  "font-src 'self' data: https:",
   `connect-src 'self' ${GSI}`,
   // I quiz sono resi via srcdoc in iframe sandbox (origine opaca); il bottone
   // GSI è servito in un iframe da accounts.google.com/gsi/.
   `frame-src 'self' blob: ${GSI}`,
+  "worker-src 'self'",
+  "manifest-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -32,7 +35,16 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
+  {
+    key: "Permissions-Policy",
+    value:
+      "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=(), usb=(), " +
+      "bluetooth=(), serial=(), midi=(), magnetometer=(), gyroscope=(), accelerometer=(), fullscreen=(self)",
+  },
+  // Ogni origine nel suo process/agent cluster (mitiga side-channel).
+  { key: "Origin-Agent-Cluster", value: "?1" },
+  { key: "X-DNS-Prefetch-Control", value: "off" },
+  { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
   // same-origin-allow-popups: protegge le nostre finestre ma consente il
   // flusso a popup di Google Identity Services.
   { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
